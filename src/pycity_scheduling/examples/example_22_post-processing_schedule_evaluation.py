@@ -35,7 +35,7 @@ from pycity_scheduling.util.write_schedules import schedule_to_json, schedule_to
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 20: Post-Processing Schedule Evaluation ------\n\n")
+    print("\n\n------ Example 22: Post-Processing Schedule Evaluation ------\n\n")
 
     # Define timer, price, weather, and environment objects:
     t = Timer()
@@ -67,13 +67,13 @@ def main(do_plot=False):
     ap.addEntity(sh)
     pv = Photovoltaic(environment=e, method=1, peak_power=4.6)
     bes.addDevice(pv)
-    bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6)
+    bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6, eta=1.0)
     bes.addDevice(bat)
 
     # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage and
     # an electrical vehicle:
     bd2 = Building(environment=e, objective='peak-shaving')
-    cd.addEntity(entity=bd2, position=[0, 0])
+    cd.addEntity(entity=bd2, position=[0, 1])
     bes = BuildingEnergySystem(environment=e)
     bd2.addEntity(bes)
     ths = ThermalHeatingStorage(environment=e, e_th_max=35, soc_init=0.5)
@@ -89,7 +89,8 @@ def main(do_plot=False):
     ap.addEntity(cl)
     sh = SpaceHeating(environment=e, method=0, loadcurve=load)
     ap.addEntity(sh)
-    ev = ElectricalVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65)
+    ev = ElectricalVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, simulate_driving=True,
+                           minimum_soc_end=0.8)
     ap.addEntity(ev)
 
     # Perform the local scheduling:
@@ -107,7 +108,6 @@ def main(do_plot=False):
         kwargs = {'ax': ax}
     else:
         kwargs = {}
-
 
     # As the power generation of a PV unit cannot be altered by the algorithms when force_renewables is not set to True,
     # the schedule is the same for 'ref' and 'default'.
@@ -147,14 +147,13 @@ def main(do_plot=False):
     if do_plot:
         plot_imbalance(bd1, schedule=["ref", "default"], **kwargs)
 
-
     # If required, the schedules can also be saved as .json or .csv files:
     save_schedule = do_plot
 
     if save_schedule:
         entities = list(cd.get_all_entities())
-        schedule_to_csv(entities, file_name="example_20", schedule=["ref", "default"])
-        schedule_to_json(entities, file_name="example_20", schedule=["ref", "default"])
+        schedule_to_csv(entities, file_name="example_22", schedule=["ref", "default"])
+        schedule_to_json(entities, file_name="example_22", schedule=["ref", "default"])
 
         # Plot the city district hierarchy and its lower-level devices into the current directory:
         plot_entity_directory(cd, ["ref", "default"], levels=2)

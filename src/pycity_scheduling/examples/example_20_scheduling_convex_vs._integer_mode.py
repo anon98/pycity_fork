@@ -32,11 +32,11 @@ from pycity_scheduling.algorithms import *
 
 
 # This is a simple power scheduling example to demonstrate the difference between the pycity_scheduling's convex and
-# integer (MIP) optimization models using the distributed Exchange ADMM algorithm.
+# integer (MIP) optimization models using the distributed Exchange MIQP ADMM algorithm.
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 16: Scheduling Convex vs. Integer Mode ------\n\n")
+    print("\n\n------ Example 20: Scheduling Convex vs. Integer Mode ------\n\n")
 
     # Scheduling will be performed for a typical winter day within the annual heating period:
     env = factory.generate_standard_environment(step_size=3600, op_horizon=24, mpc_horizon=None, mpc_step_width=None,
@@ -46,8 +46,8 @@ def main(do_plot=False):
     cd = CityDistrict(environment=env, objective='peak-shaving')
 
     # Building equipped with space heating, electrical heater, thermal energy storage, and photovoltaic unit.
-    # Objective is peak-shaving:
-    bd1 = Building(environment=env, objective='peak-shaving')
+    # Objective is self-consumption:
+    bd1 = Building(environment=env, objective='self-consumption')
     cd.addEntity(entity=bd1, position=[0, 0])
     ap1 = Apartment(environment=env)
     bd1.addEntity(ap1)
@@ -55,16 +55,15 @@ def main(do_plot=False):
     ap1.addEntity(sh1)
     bes1 = BuildingEnergySystem(environment=env)
     bd1.addEntity(bes1)
-    eh1 = ElectricalHeater(environment=env, p_th_nom=12.0, lower_activation_limit=0.5)
+    eh1 = ElectricalHeater(environment=env, p_th_nom=12.0, lower_activation_limit=0.25)
     bes1.addDevice(eh1)
     ths1 = ThermalHeatingStorage(environment=env, e_th_max=24.0)
     bes1.addDevice(ths1)
     pv1 = Photovoltaic(environment=env, method=1, peak_power=25.0)
     bes1.addDevice(pv1)
 
-
     # First, perform the power scheduling using convex models for the electrical appliances:
-    opt = ExchangeADMM(cd, mode='convex')
+    opt = ExchangeMIQPADMM(cd, mode='convex', rho=0.5, eps_primal=1.0, eps_dual=0.1)
     opt.solve()
     cd.copy_schedule("convex_schedule")
 
@@ -115,7 +114,7 @@ def main(do_plot=False):
         plt.show()
 
     # Second, perform the power scheduling using integer models for the electrical appliances:
-    opt = ExchangeADMM(cd, mode='integer')
+    opt = ExchangeMIQPADMM(cd, mode='integer', rho=0.5, eps_primal=1.0, eps_dual=0.1)
     opt.solve()
     cd.copy_schedule("integer_schedule")
 
@@ -170,7 +169,7 @@ def main(do_plot=False):
 # profile of the obtained city district power curve. To perfectly balance the power demand and supply in the district,
 # the flexibility from the thermal heating storage unit is exploited together with the capability to operate the
 # electrical heater at any operation point between 0% and 100% of its nominal power. Instead, in the integer case, the
-# electrical heater can only operate at either 0% or in-between 50% and 100% of its nominal power. For this reason, the
+# electrical heater can only operate at either 0% or in-between 25% and 100% of its nominal power. For this reason, the
 # final power profile on the city district level is not as "flat" as in the convex case. However, the integer case
 # might better reflect the actual operation conditions of a real electrical heater unit.
 

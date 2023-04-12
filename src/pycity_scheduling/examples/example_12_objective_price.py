@@ -31,11 +31,11 @@ from pycity_scheduling.algorithms import *
 
 
 # This is a very simple power scheduling example using the central optimization algorithm to demonstrate the impact
-# of system level objective "valley-filling".
+# of system level objective "price".
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 12: Objective Valley-Filling ------\n\n")
+    print("\n\n------ Example 12: Objective Price ------\n\n")
 
     # Define timer, price, weather, and environment objects:
     t = Timer(op_horizon=96, step_size=900, initial_date=(2015, 4, 1))
@@ -43,9 +43,8 @@ def main(do_plot=False):
     w = Weather(timer=t)
     e = Environment(timer=t, weather=w, prices=p)
 
-    # City district with district operator objective "valley-filling":
-    valley_profile = [3.0 for i in range(24)] + [4.0 for i in range(24)] + [3.5 for i in range(48)]
-    cd = CityDistrict(environment=e, objective='valley-filling', valley_profile=np.array(valley_profile))
+    # City district with district operator objective "peak-shaving":
+    cd = CityDistrict(environment=e, objective='price')
 
     # Schedule some sample buildings. The buildings' objectives are defined as "none".
     n = 10
@@ -66,39 +65,31 @@ def main(do_plot=False):
         ap.addEntity(sh)
         pv = Photovoltaic(environment=e, method=1, peak_power=8.2)
         bes.addDevice(pv)
-        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6)
+        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6, eta=1.0)
         bes.addDevice(bat)
-
 
     # Perform the scheduling:
     opt = CentralOptimization(city_district=cd)
-    results = opt.solve()
-    cd.copy_schedule("valley-filling")
+    opt.solve()
+    cd.copy_schedule("price")
 
     # Print and show the city district's schedule:
     print("Schedule of the city district:")
     print(list(cd.p_el_schedule))
 
-    gs = gridspec.GridSpec(3, 1)
+    gs = gridspec.GridSpec(2, 1)
     ax0 = plt.subplot(gs[0])
     ax0.plot(list(range(e.timer.timesteps_used_horizon)), cd.p_el_schedule)
-    plt.ylim([-2.0, 5.0])
-    plt.grid()
+    plt.ylim([-100.0, 200.0])
     plt.ylabel('Electrical power in kW')
     plt.title('City district scheduling result')
 
     ax1 = plt.subplot(gs[1], sharex=ax0)
-    ax1.plot(list(range(e.timer.timesteps_used_horizon)), valley_profile)
-    plt.grid()
-    plt.ylabel('Reference power curve in kW')
-
-    ax1 = plt.subplot(gs[2], sharex=ax0)
-    ax1.plot(list(range(e.timer.timesteps_used_horizon)), np.array(cd.p_el_schedule) + np.array(valley_profile))
-    plt.ylim([0.0, 10.0])
-    plt.grid()
-    plt.ylabel('Sum of both power curves in kW')
+    ax1.plot(list(range(e.timer.timesteps_used_horizon)), e.prices.da_prices)
+    plt.ylabel('Spot market day-ahead prices in ct/kWh')
 
     plt.xlabel('Time in hours', fontsize=12)
+    plt.grid()
 
     if do_plot:
         figManager = plt.get_current_fig_manager()
@@ -111,12 +102,10 @@ def main(do_plot=False):
 
 
 # Conclusions:
-# Using "valley-filling" as the system level objective results in an "inverse" power profile for the considered city
-# district compared to the "reference" power curve. The reference power curve usually represents a baseline with several
-# power peaks and valleys that should get "compensated" taking advantage of the local flexibility potentials. In other
-# words, this means that the sum of the city district's power profile and the reference power curve results in a "flat"
-# power profile. This is usually the preferred system operation from the viewpoint of a network operator and/or district
-# operator.
+# Using "price" as the system level objective results in a "cheap" power profile for the considered city district.
+# In other words, this means that power is bought from the spot market during cheap tariff periods and sold during
+# expensive tariff periods incorporating the local flexibility potentials. A cost-optimal power profile is usually
+# the preferred option by a district operator who procures the electrical power for its customers.
 
 
 if __name__ == '__main__':

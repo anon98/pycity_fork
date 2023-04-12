@@ -29,11 +29,11 @@ from pycity_scheduling.util import calculate_flexibility_potential
 
 
 # This example shows how to quantify the operational flexibility potential for a given city district using
-# pycity_scheduling. It is built upon the same district setup as defined in example 'example_12_district_generator.py'.
+# pycity_scheduling. It is built upon the same district setup as defined in example 'example_15_district_generator.py'.
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 14: District Flexibility Quantification ------\n\n")
+    print("\n\n------ Example 17: District Flexibility Quantification ------\n\n")
 
     # First, create an environment using the factory's "generate_standard_environment" method. The environment
     # automatically encapsulates time, weather, and price data/information.
@@ -107,7 +107,6 @@ def main(do_plot=False):
                                                 mfh_building_distribution=mfh_distribution,
                                                 mfh_heating_distribution=mfh_heating_distribution,
                                                 mfh_device_probabilities=mfh_device_probs)
-
 
     # The city district's maximum operational flexibility potential in terms of the absolute flexibility gain metric can
     # be quantified very easily using the pycity_scheduling's "calculate_flexibility_potential" function. The absolute

@@ -1,14 +1,14 @@
-TRY Shamrockpark
+TRY 2018
 Ort: Herne (NRW)                     
 Lage: 51°53'N <- B.   7°21'O <- L.
-Zeitpunkt der Erstellung: Oktober 2020 (HeatBeat Engineering)
+Zeitpunkt der Erstellung: Oktober 2020
 
 Art des TRY    : ------
 Bezugszeitraum : ------
-Stadteffekt    : -----
-Hoehenkorrektur : -----
+Stadteffekt    : ------
+Hoehenkorrektur : ------
 
-Datenbasis : DWD TRY
+Datenbasis : DWD Open Data (https://opendata.dwd.de/)
 
 Format: (i2,2x,i4,2x,i2,2x,i2,2x,i2,2x,i1,2x,i3,2x,f6.1,2x,f6.1,2x,f7.1,2x,f6.1,2x,i3,2x,i2,2x,i4,2x,i4,1x,i1,2x,i4,2x,i5,2x,i1)
 

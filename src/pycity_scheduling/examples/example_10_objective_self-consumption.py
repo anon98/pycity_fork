@@ -24,18 +24,17 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
 
 from pycity_scheduling.classes import *
 from pycity_scheduling.algorithms import *
 
 
 # This is a very simple power scheduling example using the central optimization algorithm to demonstrate the impact
-# of system level objective "co2".
+# of system level objective "self-consumption".
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 11: Objective CO2------\n\n")
+    print("\n\n------ Example 10: Objective Self-Consumption ------\n\n")
 
     # Define timer, price, weather, and environment objects:
     t = Timer(op_horizon=96, step_size=900, initial_date=(2015, 4, 1))
@@ -43,8 +42,8 @@ def main(do_plot=False):
     w = Weather(timer=t)
     e = Environment(timer=t, weather=w, prices=p)
 
-    # City district with district operator objective "co2":
-    cd = CityDistrict(environment=e, objective='co2')
+    # City district with district operator objective "self-consumption":
+    cd = CityDistrict(environment=e, objective='self-consumption')
 
     # Schedule some sample buildings. The buildings' objectives are defined as "none".
     n = 10
@@ -65,50 +64,32 @@ def main(do_plot=False):
         ap.addEntity(sh)
         pv = Photovoltaic(environment=e, method=1, peak_power=8.2)
         bes.addDevice(pv)
-        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6)
+        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6, eta=1.0)
         bes.addDevice(bat)
-
 
     # Perform the scheduling:
     opt = CentralOptimization(city_district=cd)
-    opt.solve()
-    cd.copy_schedule("co2")
+    results = opt.solve()
+    cd.copy_schedule("self-consumption")
 
     # Print and show the city district's schedule:
     print("Schedule of the city district:")
     print(list(cd.p_el_schedule))
-
-    gs = gridspec.GridSpec(2, 1)
-    ax0 = plt.subplot(gs[0])
-    ax0.plot(list(range(e.timer.timesteps_used_horizon)), cd.p_el_schedule)
-    plt.ylim([-100.0, 200.0])
-    plt.grid()
+    plt.plot(cd.p_el_schedule)
+    plt.xlabel('Time in hours')
     plt.ylabel('Electrical power in kW')
     plt.title('City district scheduling result')
-
-    ax1 = plt.subplot(gs[1], sharex=ax0)
-    ax1.plot(list(range(e.timer.timesteps_used_horizon)), e.prices.co2_prices)
     plt.grid()
-    plt.ylabel('National CO2 emissions in g/kWh')
-
-    plt.xlabel('Time in hours', fontsize=12)
-
     if do_plot:
-        figManager = plt.get_current_fig_manager()
-        if hasattr(figManager, "window"):
-            figManagerWindow = figManager.window
-            if hasattr(figManagerWindow, "state"):
-                figManager.window.state("zoomed")
         plt.show()
     return
 
 
 # Conclusions:
-# Using "co2" as the system level objective results in a low emission power profile for the considered city district.
-# In other words, this means that power is preferably bought from the energy spot market during periods with low
-# national CO2 emissions emitted incorporating the local flexibility potentials. These periods usually correspond to a
-# high share of renewable energy available in the national energy mix. A low emission power profile is usually the
-# preferred option for a district operator and customers who demand for "green" solutions.
+# Using "self-consumption" as the system level objective results in a power profile with zero net power export for the
+# considered city district over time. In other words, this means that the local power generation (e.g. from the
+# buildings' PV units) is fully self-consumed inside the city district. However, this may result in an increased power
+# import from the distribution grid and therefore cause power peaks.
 
 
 if __name__ == '__main__':

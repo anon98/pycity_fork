@@ -1,53 +1,62 @@
-from pycity_scheduling.algorithms import *
-from pycity_scheduling.classes.wind_energy_converter import WindEnergyConverter
-import matplotlib.pyplot as plt
+"""
+The pycity_scheduling framework
+
+
+Copyright (C) 2022,
+Institute for Automation of Complex Power Systems (ACS),
+E.ON Energy Research Center (E.ON ERC),
+RWTH Aachen University
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
+
 import numpy as np
+import matplotlib.pyplot as plt
+
 import pycity_scheduling.util.factory as factory
-from pycity_scheduling.util.district_analyzer import DistrictAnalyzer
-from pycity_scheduling.util.write_schedules import schedule_to_json, schedule_to_csv
-
-# Set the parameters for the algorithm
-max_iterations = 250
-mode = 'integer'
-r_exch = 0.05
-s_exch = 0.05
-r_dual = 0.05
-s_dual = 0.05
+import pycity_scheduling.util.debug as debug
+from pycity_scheduling.algorithms import *
+from pycity_scheduling.classes import *
 
 
-# Generate City District and start the algorithm
+# In this example, the power schedule for a complex city district scenario is determined. The scenario is built upon the
+# district setup as defined in example 'example_15_district_generator.py', but it contains more than 100 buildings and
+# is hence considered more complex.
+
 def main(do_plot=False):
-    print("\n\n------ Evaluate Exchange MIQP ADMM ------\n\n")
+    print("\n\n------ Example 16: Scheduling Complex City District ------\n\n")
 
     # First, create an environment using the factory's "generate_standard_environment" method. The environment
     # automatically encapsulates time, weather, and price data/information.
-    env = factory.generate_standard_environment(initial_date=(2015, 3, 23), step_size=900, op_horizon=96)
+    env = factory.generate_standard_environment(initial_date=(2018, 12, 6), step_size=900, op_horizon=96)
 
-    # Create 5 single-family houses:
-    num_sfh = 10
+    # Create 75 single-family houses:
+    num_sfh = 75
 
     # 50% SFH.2002, 30% SFH.2010, 20% SFH.2016 (based on TABULA):
     sfh_distribution = {
-        'SFH.1200': 0.033,
-        'SFH.1860': 0.096,
-        'SFH.1919': 0.112,
-        'SFH.1949': 0.085,
-        'SFH.1958': 0.150,
-        'SFH.1969': 0.149,
-        'SFH.1979': 0.070,
-        'SFH.1984': 0.115,
-        'SFH.1995': 0.103,
-        'SFH.2002': 0.077,
-        'SFH.2010': 0.011,
-        'SFH.2016': 0.0,
+        'SFH.2002': 0.5,
+        'SFH.2010': 0.3,
+        'SFH.2016': 0.2,
     }
 
     # 50% of the single-family houses are equipped with heat pump, 10% with boiler, and 40% with electrical heater:
     sfh_heating_distribution = {
-        'HP': 0.4,
-        'BL': 0,
-        'EH': 0.2,
-        'CHP': 0.4,
+        'HP': 0.5,
+        'BL': 0.1,
+        'EH': 0.4,
     }
 
     # All single-family houses are equipped with a fixed load, 20% have a deferrable load, and 30% have an electric
@@ -56,14 +65,14 @@ def main(do_plot=False):
     # The values are rounded in case they cannot be perfectly matched to the given number of buildings.
     sfh_device_probs = {
         'FL': 1,
-        'DL': 1,
-        'EV': 0.33,
+        'DL': 0.2,
+        'EV': 0.3,
         'BAT': 0.5,
         'PV': 0.8,
     }
 
-    # Create 0 multi-family houses (number of apartments according to TABULA):
-    num_mfh = 0
+    # Create 25 multi-family houses (number of apartments according to TABULA):
+    num_mfh = 25
 
     # 60% MFH.2002, 20% SFH.2010, 20% SFH.2016 (based on TABULA):
     mfh_distribution = {
@@ -91,8 +100,9 @@ def main(do_plot=False):
         'PV': 0.8,
     }
 
-    # Finally, create the desired city district using the factory's "generate_tabula_district" method. The district's/
-    # district operator's objective is defined as "peak-shaving" and the buildings' objectives are defined as "price".
+    # Finally, create the desired city district using the factory's "generate_tabula_district" method. The district's
+    # district operator's objective is defined as "price" (i.e., day-ahead prices) and the buildings' objectives are
+    # also defined as "price" (i.e., time-of-use prices).
     district = factory.generate_tabula_district(env, num_sfh, num_mfh,
                                                 sfh_distribution,
                                                 sfh_heating_distribution,
@@ -100,70 +110,40 @@ def main(do_plot=False):
                                                 mfh_distribution,
                                                 mfh_heating_distribution,
                                                 mfh_device_probs,
-                                                district_objective='peak-shaving',
+                                                district_objective='price',
                                                 building_objective='price'
                                                 )
-    """
+
+    # To cover the city district's load, the setup additionally comprises a wind energy converter of approx. 2MWp:
     v = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 99])
     p = np.array([0, 0, 3, 25, 82, 174, 321, 532, 815, 1180, 1580, 1810, 1980, 2050, 2050, 2050, 2050, 2050, 2050, 2050,
                   2050, 2050, 2050, 2050, 2050, 2050, 0, 0])
     wec = WindEnergyConverter(env, velocity=v, power=p, hub_height=78.0)
     district.addEntity(wec, [0, 0])
-    """
 
-    d_a_pre = DistrictAnalyzer(city_district=district)
-    d_a_pre.complete_pre_analyze()
-    """
-    # Perform the city district scheduling using the Exchange MIQP ADMM Unconstrained Light algorithm:
-    opt = ExchangeMIQPADMM(city_district=district, mode=mode, x_update_mode='constrained',
-                                             eps_primal=r_exch, eps_dual=s_exch, eps_primal_i=r_dual, eps_dual_i=s_dual,
-                                             max_iterations=max_iterations)
+    # Hierarchically print the district and all buildings/assets:
+    debug.print_district(district, 1)
+
+    # Perform the city district scheduling using the central optimization algorithm:
+    opt = CentralOptimization(district)
     results = opt.solve()
     district.copy_schedule("district_schedule")
 
     # Plot the scheduling results:
-    plt.figure(1)
     plt.plot(district.p_el_schedule)
     plt.ylabel("City District Power [kW]")
     plt.title("Complex City District Scenario - Schedule")
     plt.grid()
-    # Plot the objective values over the iterations
-    plt.figure(2)
-    plt.plot(results["obj_value"])
-    plt.ylabel("Objetive value")
-    plt.title("Objetive Value")
-    plt.grid()
-    # Plot the residuals over the iterations
-    plt.figure(3)
-    plt.plot(results["r_norms"], label='Primal residual')
-    plt.plot(results["s_norms"], label='Dual residual')
-    plt.ylabel("Residual Norms")
-    plt.title("Exchange Problem Residuals")
-    plt.grid()
-    plt.figure(4)
-    plt.plot(results["r_sub_ave"], label='Primal residual')
-    plt.plot(results["s_sub_ave"], label='Dual residual')
-    plt.ylabel("Residual Norms")
-    plt.title("Sub-Problem Residuals")
-    plt.grid()
-
-    # Print some results
-    print("Iterations Exchange MIQP ADMM: ", results["iterations"][-1])
-    print("Objective value: ", results["obj_value"][-1])
-
-    """
-    opt = CentralOptimization(city_district=district, mode="integer")
-    results = opt.solve()
-    district.copy_schedule("central")
-    plt.plot(district.p_el_schedule)
-    print("Objective value: ", results["obj_value"])
-
-    d_a_post = DistrictAnalyzer(district)
-    d_a_post.complete_post_analyze()
-
     if do_plot:
         plt.show()
     return
+
+
+# Conclusions:
+# The power scheduling for a complex city district scenario can be done easily using pycity_scheduling. Even more than
+# 100 (TABULA) buildings could be considered, but this might lead to scalability issues when using the central
+# optimization algorithm. Thus, with a growing number buildings, distributed algorithms such as dual decomposition or
+# ADMM should be applied.
 
 
 if __name__ == '__main__':

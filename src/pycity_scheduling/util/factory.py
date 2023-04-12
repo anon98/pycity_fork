@@ -40,22 +40,22 @@ def generate_standard_environment(**timer_args):
     pycity_scheduling.classes.Environment
     """
     timer = Timer(**timer_args)
-    #weather = Weather(timer)
-    #root_path = "U:\ACS-Public\Personal_Folders\ssw\cvo\pycity_scheduling\src\pycity_scheduling\data"
-    #weather_file_path = os.path.join(root_path, "TRY_Herne_2020.dat")
-    root_path = os.path.dirname(os.path.realpath(__file__))
 
-    weather_file_path = os.path.join(root_path, "TRY_Herne_2020.dat")
-
+    weather_file_name = "TRY_2018.dat"
+    root_path = os.path.dirname(os.path.dirname(__file__))
+    weather_file_path = os.path.join(root_path, "data", weather_file_name)
     weather = Weather(timer, path_TRY=weather_file_path, location=(51.53, 7.21), altitude=10.0)
 
-    weather = Weather(timer, path_TRY=weather_file_path, location=(51.53, 7.21), altitude=10.0)
     prices = Prices(timer)
+
     environment = Environment(timer, weather, prices)
     return environment
 
 
 def _calculate_ev_times(timer):
+    """
+    Supporting function to calculate electric vehicle charging time slots.
+    """
     length = int(3600/timer.time_discretization)
     ev_time_ranges = [
         [0] * (8 * length) + [1] * (12 * length) + [0] * (4 * length),
@@ -72,6 +72,9 @@ def _calculate_ev_times(timer):
 
 
 def _calculate_dl_times(timer):
+    """
+    Supporting function to calculate deferrable load consumption time slots.
+    """
     length = int(3600/timer.time_discretization)
     dl_time_ranges = [
         [1] * (8 * length) + [0] * (16 * length),
@@ -169,10 +172,13 @@ def generate_tabula_buildings(environment,
     seed: int, optional
         Specify a seed for the randomization. If omitted, a non-deterministic
         city district will be generated.
-
+    mpi_interface : MPIInterface, optional
+        In the case of MPI, create a more "lightweight" city district per MPI process only containing the particular
+        buildings and assets that are required for the computations using MPI. Rank zero always has a list with all
+        buildings.
     Returns
     ----------
-    list of pycity_scheduling.classes.Building :
+    list of pycity_scheduling.classes.Building : list
         List of generated buildings.
     """
     if building_distribution is None:
@@ -213,7 +219,6 @@ def generate_tabula_buildings(environment,
     a = round(device_probabilities.get('BAT', 0) * number)
     bat_list = [True] * a + [False] * (number - a)
 
-    ev_time_ranges = _calculate_ev_times(environment.timer)
     dl_time_ranges = _calculate_dl_times(environment.timer)
 
     if seed is not None:
@@ -228,17 +233,17 @@ def generate_tabula_buildings(environment,
     buildings = []
     ap_counter = 0
 
+    mpi_process_range = np.array([])
     if mpi_interface is not None:
-        mpi_process_range = mpi_interface.get_mpi_process_range(number)
+        mpi_process_range = mpi_interface.get_mpi_process_range(number+1)
 
     # Generate buildings:
     for i, b in enumerate(building_dicts):
         dummy_building = False
         if mpi_interface is not None:
             if mpi_interface.get_rank() != 0:
-                if mpi_interface.get_rank() != mpi_process_range[i]:
+                if mpi_interface.get_rank() != mpi_process_range[i+1]:
                     dummy_building = True
-        dummy_building = False
 
         building_type = b['building_type']
         name = 'BD{:03}_{}'.format(i + 1, building_type)
@@ -247,76 +252,87 @@ def generate_tabula_buildings(environment,
                       profile_type=b['th_profile_type'],
                       building_type=building_type)
 
-        if not dummy_building:
-            bes = BuildingEnergySystem(environment)
-            bd.addEntity(bes)
+        bes = BuildingEnergySystem(environment)
+        bd.addEntity(bes)
 
-            ap_area = b['net_floor_area']/b['apartments']
+        ap_area = b['net_floor_area']/b['apartments']
 
-            for n in range(b['apartments']):
-                ap = Apartment(environment, ap_area)
-                sh = SpaceHeating(environment, method=1, living_area=ap_area,
-                                  specific_demand=b['th_demand'],
-                                  profile_type=b['th_profile_type'])
+        for n in range(b['apartments']):
+            ap = Apartment(environment, ap_area)
+            sh = SpaceHeating(environment, method=1, living_area=ap_area,
+                              specific_demand=b['th_demand'],
+                              profile_type=b['th_profile_type'])
+            if not dummy_building:
                 ap.addEntity(sh)
 
-                if fl_list[ap_counter]:
-                    fl = FixedLoad(environment, method=1,
-                                   annual_demand=b['el_demand'],
-                                   profile_type=b['el_profile_type'])
+            if fl_list[ap_counter]:
+                fl = FixedLoad(environment, method=1,
+                               annual_demand=b['el_demand'],
+                               profile_type=b['el_profile_type'])
+                if not dummy_building:
                     ap.addEntity(fl)
 
-                if dl_list[ap_counter]:
-                    e_el = random.uniform(0.8, 4.5)
-                    p_el = random.uniform(1.125, 2.5)
-                    time = random.choice(dl_time_ranges)
-                    dl = DeferrableLoad(environment, p_el_nom=p_el,
-                                        e_consumption=e_el, load_time=time,
-                                        lt_pattern='daily')
+            if dl_list[ap_counter]:
+                e_el = random.uniform(0.8, 4.5)
+                p_el = random.uniform(1.125, 2.5)
+                time = random.choice(dl_time_ranges)
+                dl = DeferrableLoad(environment, p_el_nom=p_el,
+                                    e_consumption=e_el, load_time=time,
+                                    lt_pattern='daily')
+                if not dummy_building:
                     ap.addEntity(dl)
 
-                if ev_list[ap_counter]:
-                    ev_data = random.choice(list(evd.values()))
-                    ev_charging_time = random.choice(ev_time_ranges)
-                    soc = 0.5 if ev_data['charging_method'] == 'fast' else 0.75
-                    ev = ElectricalVehicle(environment,
-                                           e_el_max=ev_data['e_el_storage_max'],
-                                           p_el_max_charge=ev_data['p_el_nom'],
-                                           soc_init=soc,
-                                           charging_time=ev_charging_time,
-                                           ct_pattern='daily')
+            if ev_list[ap_counter]:
+                ev_data = random.choice(list(evd.values()))
+                ev_charging_time = [0] + [1] * (environment.timer.simu_horizon - 1)
+                soc = random.uniform(0.2, 0.75)
+                ev = ElectricalVehicle(environment,
+                                       e_el_max=ev_data['e_el_storage_max'],
+                                       p_el_max_charge=11.0,
+                                       soc_init=soc,
+                                       charging_time=ev_charging_time,
+                                       ct_pattern='daily',
+                                       simulate_driving=False,
+                                       minimum_soc_end=0.8,
+                                       eta=0.9)
+                if not dummy_building:
                     ap.addEntity(ev)
 
+            if not dummy_building:
                 bd.addEntity(ap)
-                ap_counter += 1
+            ap_counter += 1
 
+        if not dummy_building:
             p_th_heat = max(sum(e.p_th_heat_schedule for e in filter_entities(bd, 'SH'))) + 1
-            heating_device = heating_list[i](environment, p_th_nom=p_th_heat)
-            ths = ThermalHeatingStorage(environment, e_th_max=2.0*p_th_heat, soc_init=0.5)
+        else:
+            p_th_heat = 100.0
+        heating_device = heating_list[i](environment, p_th_nom=p_th_heat)
+        ths = ThermalHeatingStorage(environment, e_th_max=2.0*p_th_heat, soc_init=0.5, loss_factor=10)
+
+        if not dummy_building:
             bes.addDevice(heating_device)
             bes.addDevice(ths)
 
-            if pv_list[i]:
-                if b['roof_angle'] == 0.0:
-                    angle = 35.0
-                else:
-                    angle = b['roof_angle']
-                area = b['roof_area']/2.0
-                # Solar world 290 standard values
-                pv = Photovoltaic(environment, method=0, area=area, eta_noct=0.161853,
-                                  t_cell_noct=46, alpha_noct=-0.0041, beta=angle)
+        if pv_list[i]:
+            if b['roof_angle'] == 0.0:
+                angle = 35.0
+            else:
+                angle = b['roof_angle']
+            area = b['roof_area']/2.0
+            # Solar world 290 standard values
+            pv = Photovoltaic(environment, method=0, area=area, eta_noct=0.161853,
+                              t_cell_noct=46, alpha_noct=-0.0041, beta=angle)
+            if not dummy_building:
                 bes.addDevice(pv)
 
-            if bat_list[i]:
-                p_el = 13.5 * b['apartments']
-                bat = Battery(environment, e_el_max=p_el, p_el_max_charge=4.6,
-                              p_el_max_discharge=4.6, soc_init=0.5)
+        if bat_list[i]:
+            p_el = 13.5 * b['apartments']
+            bat = Battery(environment, e_el_max=p_el, p_el_max_charge=4.6,
+                          p_el_max_discharge=4.6, soc_init=0.5)
+            if not dummy_building:
                 bes.addDevice(bat)
 
-            buildings.append(bd)
-
-    #assert ap_counter == number_ap
-
+        buildings.append(bd)
     return buildings
 
 
@@ -390,9 +406,14 @@ def generate_tabula_district(environment,
     seed: int, optional
         Specify a seed for the randomization. If omitted, a non-deterministic
         city district will be generated.
-
+    mpi_interface : MPIInterface, optional
+        In the case of MPI, create a more "lightweight" city district per MPI process only containing the particular
+        buildings and assets that are required for the computations using MPI. Rank zero always has the city district
+        with all buildings.
     Returns
-    -------
+    ----------
+    list of pycity_scheduling.classes.CityDistrict : CityDistrict
+        CityDistrict object containing the generated buildings.
 
     """
     cd = CityDistrict(environment, district_objective)
@@ -423,7 +444,7 @@ def generate_tabula_district(environment,
 
 def generate_simple_building(env, fl=0, sh=0, eh=0, ths=0, bat=0):
     """
-    Generate a simple building with loads and storages.
+    Generate a simple building with load and storage units.
 
     Parameters
     ----------
@@ -441,7 +462,8 @@ def generate_simple_building(env, fl=0, sh=0, eh=0, ths=0, bat=0):
 
     Returns
     -------
-    pycity_scheduling.classes.Building
+    pycity_scheduling.classes.Building: Building
+        Simple building with load and storage units.
     """
     ti = env.timer
 

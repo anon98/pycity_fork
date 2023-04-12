@@ -35,7 +35,7 @@ from pycity_scheduling.solvers import *
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 22: Algorithm Exchange-MIQP-ADMM ------\n\n")
+    print("\n\n------ Example 06: Algorithm Exchange-MIQP-ADMM ------\n\n")
 
     # First, instantiate the MPI interface and disable printing for all MPI processes other than with rank 0.
     mpi_interface = mpi.MPIInterface()
@@ -71,7 +71,7 @@ def main(do_plot=False):
     ap.addEntity(sh)
     pv = Photovoltaic(environment=e, method=1, peak_power=4.6)
     bes.addDevice(pv)
-    bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6)
+    bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6, eta=1.0)
     bes.addDevice(bat)
 
     # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage and
@@ -93,7 +93,8 @@ def main(do_plot=False):
     load = np.array([20.0, 20.0])
     sh = SpaceHeating(environment=e, method=0, loadcurve=load)
     ap.addEntity(sh)
-    ev = ElectricalVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, charging_time=[0, 1])
+    ev = ElectricalVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, charging_time=[0, 1],
+                           simulate_driving=True, minimum_soc_end=0.8)
     ap.addEntity(ev)
 
     # Perform the scheduling with the Central Optimization algorithm as reference:
@@ -114,8 +115,8 @@ def main(do_plot=False):
     print(list(cd.p_el_schedule))
 
     # Perform the scheduling with the Exchange MIQP ADMM algorithm and a constrained x_update
-    opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='constrained', eps_primal=0.01,
-                           eps_dual=0.01, eps_primal_i=0.01, eps_dual_i=0.01)
+    opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='constrained', rho=5.0, eps_primal=0.01,
+                           eps_dual=0.01, max_iterations=500)
     results = opt.solve()
     cd.copy_schedule("exchange_miqp_admm-constrained")
 
@@ -135,29 +136,26 @@ def main(do_plot=False):
 
     # Perform the scheduling with the Exchange MIQP ADMM algorithm and an unconstrained x_update (currently only works
     # with commercial solvers):
-    """
     if DEFAULT_SOLVER is "gurobi_direct" or DEFAULT_SOLVER is "gurobi_persistent" or DEFAULT_SOLVER is "cplex":
-        opt = ExchangeMIQPADMMMPI(city_district=cd, mode='integer', x_update_mode='unconstrained', eps_primal=0.001,
-                               eps_dual=0.001, eps_primal_i=0.001, eps_dual_i=0.001)
-    """
-    opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='unconstrained', max_iterations=1000,
-                           eps_primal=0.01, eps_dual=0.01, eps_primal_i=0.01, eps_dual_i=0.01)
-    results = opt.solve()
-    cd.copy_schedule("exchange_miqp_admm-unconstrained")
+        opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='unconstrained', rho=5.0,
+                               eps_primal=0.001, eps_dual=0.001, max_iterations=500)
 
-    # Print some results:
-    print("")
-    print("")
-    print("Exchange MIQP ADMM, unconstrained x-update - Number of iterations:", results["iterations"][-1])
-    print("")
+        results = opt.solve()
+        cd.copy_schedule("exchange_miqp_admm-unconstrained")
 
-    # Print the building's schedules:
-    print("Schedule building no. one:")
-    print(list(bd1.p_el_schedule))
-    print("Schedule building no. two:")
-    print(list(bd2.p_el_schedule))
-    print("Schedule of the city district:")
-    print(list(cd.p_el_schedule))
+        # Print some results:
+        print("")
+        print("")
+        print("Exchange MIQP ADMM, unconstrained x-update - Number of iterations:", results["iterations"][-1])
+        print("")
+
+        # Print the building's schedules:
+        print("Schedule building no. one:")
+        print(list(bd1.p_el_schedule))
+        print("Schedule building no. two:")
+        print(list(bd2.p_el_schedule))
+        print("Schedule of the city district:")
+        print(list(cd.p_el_schedule))
     return
 
 
@@ -165,13 +163,11 @@ def main(do_plot=False):
 # If the distributed Exchange MIQP ADMM optimization algorithm is applied, the two buildings are scheduled in a way
 # so that both the local and system level objectives are satisfied even in integer mode.
 # The Exchange MIQP ADMM algorithm has two different modes: In the "constrained" mode the x-update of the algorithm
-# is executed by the solver under the constraints of the optimization problem. In the "unconstrained" mode
-# the constraints of the optimization problem are alternatively considered by an augmented term in the x-update of the
-# algorithm. Therefore, the solver only has to minimize an polynomial objective function as x-update.
-# This example shows that the solution of the Exchange MIQP ADMM algorithm is almost identical in both the constrained
-# and the unconstrained mode, but (so far) the algorithm needs more iterations in the unconstrained mode.
-# Nevertheless, both scheduling results are close to the ones of the Central Optimization algorithm, which demonstrates
-# the correctness of the distributed algorithm.
+# is executed by the solver under the constraints of the optimization problem. In the "unconstrained" mode (still
+# experimental!), the constraints of the optimization problem are alternatively considered by an augmented term in the
+# x-update of the algorithm. Therefore, the solver only has to minimize an polynomial objective function as x-update.
+# The scheduling results of Exchange MIQP ADMM are close to the ones of the Central Optimization algorithm, which
+# demonstrates the correctness of the distributed algorithm.
 
 
 if __name__ == '__main__':

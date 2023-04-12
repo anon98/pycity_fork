@@ -3,7 +3,6 @@ Python class to analyze the generated city district in terms of the total genera
 """
 import numpy as np
 import pyomo.environ as pyomo
-import pyomo.kernel as pmo
 import matplotlib.pyplot as plt
 from pycity_scheduling.classes import *
 
@@ -38,7 +37,7 @@ class DistrictAnalyzer:
         """
         Function that returns the total PV generated power of the city district in kW per time step
         """
-        annual_power = np.zeros(35040)
+        annual_power = np.zeros(self.city_district.environment.timer.timesteps_horizon)
         total_horizon_power = np.zeros(self.op_horizon)
         for en in self.city_district.get_all_entities():
             if isinstance(en, Photovoltaic):
@@ -578,12 +577,12 @@ class DistrictAnalyzer:
         counter = 0
         for en in self.city_district.get_all_entities():
             for constraint in en.model.component_objects(pyomo.Constraint):
-                counter +=1
+                counter += 1
                 for index in constraint:
                     # check if the constraint is an equality constraint and write it in the form Ax-b=0
                     if pyomo.value(constraint[index].lower) == pyomo.value(constraint[index].upper):
                         expr = constraint[index].body - constraint[index].lower
-                        equality_list.append(expr)
+                        equality_list.append([constraint, expr])
 
                     # if the constraint is not an equality constraint it has to be an inequality constraint
                     # the next three checks are about to write that constraint in the form Cx-d >= 0
@@ -600,9 +599,6 @@ class DistrictAnalyzer:
                         inequality_list.append([constraint, expr])
                         expr = constraint[index].body - constraint[index].lower
                         inequality_list.append([constraint, expr])
-        print("Equal: ", len(equality_list))
-        print("Inequal: ", len(inequality_list))
-        print("Gesamt: ", counter)
 
         return equality_list, inequality_list
 
@@ -610,11 +606,11 @@ class DistrictAnalyzer:
         equality_list, inequality_list = self._get_constraints()
         equality_counter = 0
         inequality_counter = 0
-        # check if constraints are violated. Allow a numerical tolerance of 1e-3 which equals 1 Watt in the application
+        # Check if constraints are violated: allow a numerical tolerance of 1e-2 which equals 10 Watt in the application
         for i in range(len(equality_list)):
-            if abs(0-pyomo.value(equality_list[i])) > 1e-2:
-                print("Equality violation")
-                print(equality_list[i], "   ", pyomo.value(equality_list[i]))
+            if abs(pyomo.value(equality_list[i][1])) > 1e-2:
+                print("Equality violation: ", equality_list[i][0])
+                print(equality_list[i][1], "   ", pyomo.value(equality_list[i][1]))
                 print("")
                 equality_counter += 1
         for i in range(len(inequality_list)):
@@ -624,8 +620,8 @@ class DistrictAnalyzer:
                 print(inequality_list[i][1], "   ", pyomo.value(inequality_list[i][1]))
                 print("")
 
-        print("Number of inequality constraints:", len(inequality_list)," Number of violations: ", inequality_counter)
-        print("Number of equality constraints:", len(equality_list)," Number of violations: ", equality_counter)
+        print("Number of inequality constraints:", len(inequality_list), " Number of violations: ", inequality_counter)
+        print("Number of equality constraints:", len(equality_list), " Number of violations: ", equality_counter)
         return
 
     def check_start_vars_DL(self):
@@ -635,27 +631,3 @@ class DistrictAnalyzer:
                     if variable[0] == 0 or variable[0] == 1:
                         variable.pprint()
         return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

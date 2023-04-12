@@ -36,7 +36,7 @@ from pycity_scheduling.algorithms import *
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 17: Scheduling PV+Battery System ------\n\n")
+    print("\n\n------ Example 18: Scheduling PV+Battery System ------\n\n")
 
     # Scheduling will be performed for one month:
     env = factory.generate_standard_environment(step_size=3600, op_horizon=24*31, mpc_horizon=None,
@@ -56,7 +56,7 @@ def main(do_plot=False):
     bd.addEntity(bes)
     pv = Photovoltaic(environment=env, method=0, area=25.0, beta=30.0, eta_noct=0.15)
     bes.addDevice(pv)
-    bat = Battery(environment=env, e_el_max=13.6, p_el_max_charge=24.0, p_el_max_discharge=3.6, soc_init=0.5, eta=1,
+    bat = Battery(environment=env, e_el_max=13.6, p_el_max_charge=24.0, p_el_max_discharge=3.6, soc_init=0.5, eta=1.0,
                   storage_end_equality=True)
     bes.addDevice(bat)
 

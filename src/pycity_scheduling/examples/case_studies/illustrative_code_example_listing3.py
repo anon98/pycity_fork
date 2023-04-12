@@ -11,7 +11,7 @@ def main(do_plot=False):
 
     fi = FixedLoad(environment=e, method=1, annual_demand=3000.0, profile_type="H0")
     pv = Photovoltaic(environment=e, method=1, peak_power=6.0)
-    ba = Battery(environment=e, e_el_max=8.4, p_el_max_charge=3.6, p_el_max_discharge=3.6)
+    ba = Battery(environment=e, e_el_max=8.4, p_el_max_charge=3.6, p_el_max_discharge=3.6, eta=1.0)
 
     plot_time = list(range(t. timesteps_used_horizon))
     fig, axs = plt.subplots(1, 3)
@@ -32,7 +32,6 @@ def main(do_plot=False):
             if hasattr(figManagerWindow, "state"):
                 figManager.window.state("zoomed")
         plt.show()
-    return
 
     bd = Building(environment=e, objective="none")
     bes = BuildingEnergySystem(environment=e)
@@ -47,6 +46,19 @@ def main(do_plot=False):
     opt = CentralOptimization(city_district=cd, mode="integer")
     res = opt.solve()
     cd.copy_schedule(dst="optim_schedule")
+
+    from pycity_scheduling.util.metric import self_consumption
+    from pycity_scheduling.util.plot_schedules import plot_entity
+    from pycity_scheduling.util.write_schedules import schedule_to_json
+
+    cd.load_schedule(schedule="optim_schedule")
+
+    plot_entity(entity=cd, schedule=["optim_schedule"], title="City district - Cost-optimal schedules")
+    plot_entity(entity=ba, schedule=["optim_schedule"], title="Battery unit - Cost-optimal schedules")
+
+    print(self_consumption(entity=bd))
+
+    schedule_to_json(input_list=[fi, pv, ba], file_name="cost_optim.json", schedule=["optim_schedule"])
 
 
 if __name__ == '__main__':

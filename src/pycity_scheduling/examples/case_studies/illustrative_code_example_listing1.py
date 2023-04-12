@@ -11,7 +11,7 @@ def main(do_plot=False):
 
     fi = FixedLoad(environment=e, method=1, annual_demand=3000.0, profile_type="H0")
     pv = Photovoltaic(environment=e, method=1, peak_power=6.0)
-    ba = Battery(environment=e, e_el_max=8.4, p_el_max_charge=3.6, p_el_max_discharge=3.6)
+    ba = Battery(environment=e, e_el_max=8.4, p_el_max_charge=3.6, p_el_max_discharge=3.6, eta=1.0)
 
     plot_time = list(range(t. timesteps_used_horizon))
     fig, axs = plt.subplots(1, 3)
@@ -32,7 +32,6 @@ def main(do_plot=False):
             if hasattr(figManagerWindow, "state"):
                 figManager.window.state("zoomed")
         plt.show()
-    return
 
 
 if __name__ == '__main__':

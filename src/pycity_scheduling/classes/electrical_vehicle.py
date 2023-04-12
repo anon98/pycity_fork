@@ -61,6 +61,17 @@ class ElectricalVehicle(Battery):
         - `None` : Profile matches simulation horizon (default).
         - 'daily' : Profile matches one day.
         - 'weekly' : Profile matches one week.
+    simulate_driving : bool, optional
+        Simulate driving.
+
+        - `True`: EV may drive and lose energy during the trip
+        - `False`: EV cannot drive and lose energy during the trip
+    minimum_soc_end : float, optional
+        Set the minimum state of charge for an EV at the end of the optimization horizon. Must be in (0,1].
+        Defaults to 80%.
+    eta : float, optional
+        Charging and discharging efficiency of the EV. Must be in (0,1].
+        Defaults to 100%.
 
     Notes
     -----
@@ -88,13 +99,16 @@ class ElectricalVehicle(Battery):
     """
 
     def __init__(self, environment, e_el_max, p_el_max_charge, p_el_max_discharge=0.0,
-                 soc_init=0.5, charging_time=None, ct_pattern=None):
-        super().__init__(environment, e_el_max, p_el_max_charge, p_el_max_discharge, soc_init, eta=1,
+                 soc_init=0.5, charging_time=None, ct_pattern=None, simulate_driving=False, minimum_soc_end=0.8,
+                 eta=1.0):
+        super().__init__(environment, e_el_max, p_el_max_charge, p_el_max_discharge, soc_init, eta,
                          storage_end_equality=False)
         self._kind = "electricalvehicle"
         self._long_id = "EV_" + self._id_string
         self.charging_time_initial = charging_time
         self.ct_pattern = ct_pattern
+        self.simulate_driving = simulate_driving
+        self.minimum_soc_end = minimum_soc_end
 
         if charging_time is None:
             # load at night, drive during day
@@ -118,7 +132,7 @@ class ElectricalVehicle(Battery):
             self.charging_indices[start:start + self.charging_durations[i]] = np.full(self.charging_durations[i], i)
 
         # Contains the amount of energy to charge in charging periods.
-        self.required_charges = np.full_like(self.charging_durations, 0.8 * e_el_max, dtype=np.float)
+        self.required_charges = np.full_like(self.charging_durations, self.minimum_soc_end * e_el_max, dtype=np.float)
 
         if len(self.charging_time) > 0:
             # In first charging cycle the required charge is determined by soc_init and is not necessarily 80%.
@@ -129,10 +143,11 @@ class ElectricalVehicle(Battery):
                 self.required_charges[-1] = min(self.required_charges[-1], self.charging_durations[-1] *
                                                 self.time_slot * p_el_max_charge * self.eta_charge)
 
-        if any(self.required_charges > self.charging_durations * self.time_slot * p_el_max_charge * self.eta_charge):
+        if any(self.required_charges > self.charging_durations * self.time_slot * p_el_max_charge *
+               self.eta_charge):
             warn("Charging pattern results in infeasible constraints.")
-
-        self.new_var("p_el_drive")
+            if self.simulate_driving:
+                self.new_var("p_el_drive")
 
     def populate_model(self, model, mode="convex"):
         """
@@ -156,19 +171,27 @@ class ElectricalVehicle(Battery):
 
         if mode == "convex" or "integer":
             # Simulate power consumption while driving
-            m.p_el_drive_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, None), initialize=0)
+            if self.simulate_driving:
+                m.p_el_drive_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, None), initialize=0)
 
             # Replace coupling constraints from Battery class
             m.del_component("e_constr")
             m.del_component("e_end_constr")
 
             def e_rule(model, t):
-                delta = (
-                    (self.eta_charge * model.p_el_demand_vars[t]
-                     - (1.0 / self.eta_discharge) * model.p_el_supply_vars[t]
-                     - model.p_el_drive_vars[t])
-                    * self.time_slot
-                )
+                if self.simulate_driving:
+                    delta = (
+                        (self.eta_charge * model.p_el_demand_vars[t]
+                         - (1.0 / self.eta_discharge) * model.p_el_supply_vars[t]
+                         - model.p_el_drive_vars[t])
+                        * self.time_slot
+                    )
+                else:
+                    delta = (
+                        (self.eta_charge * model.p_el_demand_vars[t]
+                         - (1.0 / self.eta_discharge) * model.p_el_supply_vars[t])
+                        * self.time_slot
+                    )
                 e_el_last = model.e_el_vars[t - 1] if t >= 1 else model.e_el_init
                 return model.e_el_vars[t] == e_el_last + delta
             m.e_constr = pyomo.Constraint(m.t, rule=e_rule)
@@ -196,13 +219,17 @@ class ElectricalVehicle(Battery):
         for t in self.op_time_vec:
             if charging_time[t]:
                 m.p_el_demand_vars[t].setub(self.p_el_max_charge)
-                m.p_el_supply_vars[t].setub(self.p_el_max_discharge)
-                m.p_el_drive_vars[t].setub(0.0)
+                if self.simulate_driving:
+                    m.p_el_supply_vars[t].setub(self.p_el_max_discharge)
+                    m.p_el_drive_vars[t].setub(0.0)
+                else:
+                    m.p_el_supply_vars[t].setub(0.0)
                 is_initial = False
             else:
                 m.p_el_demand_vars[t].setub(0.0)
                 m.p_el_supply_vars[t].setub(0.0)
-                m.p_el_drive_vars[t].setub(None)
+                if self.simulate_driving:
+                    m.p_el_drive_vars[t].setub(None)
 
                 if is_initial:
                     # Remain at soc_init before the first charging period is reached.
@@ -214,9 +241,9 @@ class ElectricalVehicle(Battery):
 
             if t + 1 < self.op_horizon:
                 if charging_time[t] and not charging_time[t+1]:
-                    # Full battery at end of charging period
+                    # SOC at the end of the optimization horizon:
                     m.e_el_vars[t].setub(self.e_el_max)
-                    m.e_el_vars[t].setlb(self.e_el_max)
+                    m.e_el_vars[t].setlb(self.minimum_soc_end*self.e_el_max)
 
         if charging_time[-1]:
             current_ts = (timestep + self.op_horizon - 1) % int(24 / self.time_slot)

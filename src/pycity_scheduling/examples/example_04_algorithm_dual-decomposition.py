@@ -63,11 +63,11 @@ def main(do_plot=False):
     ap.addEntity(sh)
     pv = Photovoltaic(environment=e, method=1, peak_power=4.6)
     bes.addDevice(pv)
-    bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6)
+    bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6, eta=1.0)
     bes.addDevice(bat)
 
-    # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage and
-    # an electrical vehicle:
+    # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage,
+    # and an electrical vehicle:
     bd2 = Building(environment=e, objective='price')
     cd.addEntity(entity=bd2, position=[0, 0])
     bes = BuildingEnergySystem(environment=e)
@@ -85,11 +85,12 @@ def main(do_plot=False):
     ap.addEntity(cl)
     sh = SpaceHeating(environment=e, method=0, loadcurve=load)
     ap.addEntity(sh)
-    ev = ElectricalVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, charging_time=[0, 1])
+    ev = ElectricalVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, charging_time=[0, 1],
+                           simulate_driving=True, minimum_soc_end=1.0)
     ap.addEntity(ev)
 
     # Perform the scheduling:
-    opt = DualDecomposition(city_district=cd, rho=0.1, eps_primal=0.01)
+    opt = DualDecomposition(city_district=cd, rho=0.1, eps_primal=1.0)
     results = opt.solve()
     cd.copy_schedule("dual_decomposition")
 

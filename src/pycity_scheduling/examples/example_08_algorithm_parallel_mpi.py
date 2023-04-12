@@ -31,19 +31,20 @@ import pycity_scheduling.util.mpi_interface as mpi
 from pycity_scheduling.util.metric import self_consumption, autarky
 from pycity_scheduling.algorithms import *
 from pycity_scheduling.classes import *
+from pycity_scheduling.util.district_analyzer import DistrictAnalyzer
 
 
 # In this example, the power schedule for a city district scenario is determined by means of real parallel distributed
-# optimization algorithm implementations using the Message Passing Interface (MPI) standard. The scenario is built upon
-# the district setup as defined in example 'example_13_district_generator.py', but it contains just a few buildings for
-# the sake of demonstration.
+# optimization algorithm implementations using the Message Passing Interface (MPI) standard. Use command "mpiexec" to
+# create a defined number of parallel MPI processes. The scenario is built upon the district setup as defined in example
+# 'example_13_district_generator.py', but it contains just a few buildings for the sake of demonstration.
 
 def main(do_plot=False):
     # First, instantiate the MPI interface and disable printing for all MPI processes other than with rank 0.
     mpi_interface = mpi.MPIInterface()
-    mpi_interface.disable_multiple_printing()
+    mpi_interface.disable_multiple_printing(stdout=True, stderr=True)
 
-    print("\n\n------ Example 23: Distributed Algorithms Parallel MPI ------\n\n")
+    print("\n\n------ Example 08: Algorithm Parallel MPI ------\n\n")
 
     # Create an environment using the factory's "generate_standard_environment" method. The environment
     # automatically encapsulates time, weather, and price data/information.
@@ -71,7 +72,7 @@ def main(do_plot=False):
     # installation.
     # The values are rounded in case they cannot be perfectly matched to the given number of buildings.
     sfh_device_probs = {
-        'FL': 1,
+        'FL': 1.0,
         'DL': 0.0,
         'EV': 0.3,
         'BAT': 0.5,
@@ -100,7 +101,7 @@ def main(do_plot=False):
     # photovoltaic unit installation.
     # The values are rounded in case they cannot be perfectly matched to the given number of buildings.
     mfh_device_probs = {
-        'FL': 1,
+        'FL': 1.0,
         'DL': 0.0,
         'EV': 0.2,
         'BAT': 0.4,
@@ -118,7 +119,8 @@ def main(do_plot=False):
                                                 mfh_heating_distribution,
                                                 mfh_device_probs,
                                                 district_objective='peak-shaving',
-                                                building_objective='peak-shaving'
+                                                building_objective='peak-shaving',
+                                                mpi_interface=mpi_interface
                                                 )
 
     # Hierarchically print the district and all buildings/assets:
@@ -141,8 +143,8 @@ def main(do_plot=False):
     print("Autarky rate: {: >4.2f}".format(autarky(district)))
 
     # Perform the city district scheduling using the Dual Decomposition optimization algorithm:
-    print("\n### Dual Decomposition Algorithm ###\n")
-    opt = DualDecompositionMPI(district, mpi_interface, rho=0.1, eps_primal=0.01)
+    print("\n### Dual Decomposition Algorithm MPI ###\n")
+    opt = DualDecompositionMPI(district, mpi_interface, rho=0.1, eps_primal=0.01, max_iterations=200)
     results = opt.solve()
     district.copy_schedule("dual-decomposition")
 
@@ -157,8 +159,8 @@ def main(do_plot=False):
     print("Autarky rate: {: >4.2f}".format(autarky(district)))
 
     # Perform the city district scheduling using the Exchange ADMM optimization algorithm:
-    print("\n### Exchange ADMM Algorithm ###\n")
-    opt = ExchangeADMMMPI(district, mpi_interface, rho=2.0, eps_primal=0.001, eps_dual=0.01)
+    print("\n### Exchange ADMM Algorithm MPI ###\n")
+    opt = ExchangeADMMMPI(district, mpi_interface, rho=2.0, eps_primal=0.01, eps_dual=0.1, max_iterations=200)
     results = opt.solve()
     district.copy_schedule("exchange-admm")
 
@@ -174,8 +176,8 @@ def main(do_plot=False):
 
     # Perform the city district scheduling using the Exchange MIQP ADMM optimization algorithm (constrained):
     print("\n### Exchange MIQP ADMM Algorithm MPI (Constrained) ###\n")
-    opt = ExchangeMIQPADMMMPI(district, mpi_interface, mode='integer', x_update_mode='constrained', eps_primal=0.01,
-                              eps_dual=0.01, eps_primal_i=0.01, eps_dual_i=0.01)
+    opt = ExchangeMIQPADMMMPI(district, mpi_interface, mode='integer', x_update_mode='constrained', eps_primal=0.1,
+                              eps_dual=0.1, rho=1.0, max_iterations=200)
     results = opt.solve()
     district.copy_schedule("exchange_miqp_admm-constrained")
 

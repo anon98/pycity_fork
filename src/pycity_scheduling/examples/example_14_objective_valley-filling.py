@@ -24,17 +24,18 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 from pycity_scheduling.classes import *
 from pycity_scheduling.algorithms import *
 
 
 # This is a very simple power scheduling example using the central optimization algorithm to demonstrate the impact
-# of system level objective "max-consumption".
+# of system level objective "valley-filling".
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 08: Objective Max-Consumption ------\n\n")
+    print("\n\n------ Example 14: Objective Valley-Filling ------\n\n")
 
     # Define timer, price, weather, and environment objects:
     t = Timer(op_horizon=96, step_size=900, initial_date=(2015, 4, 1))
@@ -42,8 +43,9 @@ def main(do_plot=False):
     w = Weather(timer=t)
     e = Environment(timer=t, weather=w, prices=p)
 
-    # City district with district operator objective "max-consumption":
-    cd = CityDistrict(environment=e, objective='max-consumption')
+    # City district with district operator objective "valley-filling":
+    valley_profile = [3.0 for i in range(24)] + [4.0 for i in range(24)] + [3.5 for i in range(48)]
+    cd = CityDistrict(environment=e, objective='valley-filling', valley_profile=np.array(valley_profile))
 
     # Schedule some sample buildings. The buildings' objectives are defined as "none".
     n = 10
@@ -64,35 +66,56 @@ def main(do_plot=False):
         ap.addEntity(sh)
         pv = Photovoltaic(environment=e, method=1, peak_power=8.2)
         bes.addDevice(pv)
-        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6)
+        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6, eta=1.0)
         bes.addDevice(bat)
-
 
     # Perform the scheduling:
     opt = CentralOptimization(city_district=cd)
     results = opt.solve()
-    cd.copy_schedule("max-consumption")
+    cd.copy_schedule("valley-filling")
 
     # Print and show the city district's schedule:
     print("Schedule of the city district:")
     print(list(cd.p_el_schedule))
-    plt.plot(cd.p_el_schedule)
+
+    gs = gridspec.GridSpec(3, 1)
+    ax0 = plt.subplot(gs[0])
+    ax0.plot(list(range(e.timer.timesteps_used_horizon)), cd.p_el_schedule)
     plt.ylim([-2.0, 5.0])
-    plt.xlabel('Time in hours')
+    plt.grid()
     plt.ylabel('Electrical power in kW')
     plt.title('City district scheduling result')
+
+    ax1 = plt.subplot(gs[1], sharex=ax0)
+    ax1.plot(list(range(e.timer.timesteps_used_horizon)), valley_profile)
     plt.grid()
+    plt.ylabel('Reference power curve in kW')
+
+    ax1 = plt.subplot(gs[2], sharex=ax0)
+    ax1.plot(list(range(e.timer.timesteps_used_horizon)), np.array(cd.p_el_schedule) + np.array(valley_profile))
+    plt.ylim([0.0, 10.0])
+    plt.grid()
+    plt.ylabel('Sum of both power curves in kW')
+
+    plt.xlabel('Time in hours', fontsize=12)
+
     if do_plot:
+        figManager = plt.get_current_fig_manager()
+        if hasattr(figManager, "window"):
+            figManagerWindow = figManager.window
+            if hasattr(figManagerWindow, "state"):
+                figManager.window.state("zoomed")
         plt.show()
     return
 
 
 # Conclusions:
-# Using "max-consumption" as the system level objective results in a power profile with the smallest peak power for the
-# considered city district over time. In other words, this means that a certain electrical power threshold at the city
-# district's connection point is not exceeded by taking advantage of the local flexibility of the buildings' assets. A
-# power profile with a small peak power (which is most certainly a "flat" power profile) is usually the preferred system
-# operation from the viewpoint of a network operator and/or district operator.
+# Using "valley-filling" as the system level objective results in an "inverse" power profile for the considered city
+# district compared to the "reference" power curve. The reference power curve usually represents a baseline with several
+# power peaks and valleys that should get "compensated" taking advantage of the local flexibility potentials. In other
+# words, this means that the sum of the city district's power profile and the reference power curve results in a "flat"
+# power profile. This is usually the preferred system operation from the viewpoint of a network operator and/or district
+# operator.
 
 
 if __name__ == '__main__':

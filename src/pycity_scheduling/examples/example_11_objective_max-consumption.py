@@ -30,11 +30,11 @@ from pycity_scheduling.algorithms import *
 
 
 # This is a very simple power scheduling example using the central optimization algorithm to demonstrate the impact
-# of system level objective "self-consumption".
+# of system level objective "max-consumption".
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 09: Objective Self-Consumption ------\n\n")
+    print("\n\n------ Example 11: Objective Max-Consumption ------\n\n")
 
     # Define timer, price, weather, and environment objects:
     t = Timer(op_horizon=96, step_size=900, initial_date=(2015, 4, 1))
@@ -42,8 +42,8 @@ def main(do_plot=False):
     w = Weather(timer=t)
     e = Environment(timer=t, weather=w, prices=p)
 
-    # City district with district operator objective "self-consumption":
-    cd = CityDistrict(environment=e, objective='self-consumption')
+    # City district with district operator objective "max-consumption":
+    cd = CityDistrict(environment=e, objective='max-consumption')
 
     # Schedule some sample buildings. The buildings' objectives are defined as "none".
     n = 10
@@ -64,20 +64,19 @@ def main(do_plot=False):
         ap.addEntity(sh)
         pv = Photovoltaic(environment=e, method=1, peak_power=8.2)
         bes.addDevice(pv)
-        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6)
+        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6, eta=1.0)
         bes.addDevice(bat)
-
 
     # Perform the scheduling:
     opt = CentralOptimization(city_district=cd)
     results = opt.solve()
-    cd.copy_schedule("self-consumption")
+    cd.copy_schedule("max-consumption")
 
     # Print and show the city district's schedule:
     print("Schedule of the city district:")
     print(list(cd.p_el_schedule))
     plt.plot(cd.p_el_schedule)
-    #plt.ylim([-2.0, 5.0])
+    plt.ylim([-2.0, 5.0])
     plt.xlabel('Time in hours')
     plt.ylabel('Electrical power in kW')
     plt.title('City district scheduling result')
@@ -88,10 +87,11 @@ def main(do_plot=False):
 
 
 # Conclusions:
-# Using "self-consumption" as the system level objective results in a power profile with zero net power export for the
-# considered city district over time. In other words, this means that the local power generation (e.g. from the
-# buildings' PV units) is fully self-consumed inside the city district. However, this may result in an increased power
-# import from the distribution grid and therefore cause power peaks.
+# Using "max-consumption" as the system level objective results in a power profile with the smallest peak power for the
+# considered city district over time. In other words, this means that a certain electrical power threshold at the city
+# district's connection point is not exceeded by taking advantage of the local flexibility of the buildings' assets. A
+# power profile with a small peak power (which is most certainly a "flat" power profile) is usually the preferred system
+# operation from the viewpoint of a network operator and/or district operator.
 
 
 if __name__ == '__main__':

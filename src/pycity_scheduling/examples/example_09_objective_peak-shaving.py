@@ -24,18 +24,17 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
 
 from pycity_scheduling.classes import *
 from pycity_scheduling.algorithms import *
 
 
 # This is a very simple power scheduling example using the central optimization algorithm to demonstrate the impact
-# of system level objective "price".
+# of system level objective "peak-shaving".
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 10: Objective Price ------\n\n")
+    print("\n\n------ Example 09: Objective Peak-Shaving ------\n\n")
 
     # Define timer, price, weather, and environment objects:
     t = Timer(op_horizon=96, step_size=900, initial_date=(2015, 4, 1))
@@ -44,7 +43,7 @@ def main(do_plot=False):
     e = Environment(timer=t, weather=w, prices=p)
 
     # City district with district operator objective "peak-shaving":
-    cd = CityDistrict(environment=e, objective='price')
+    cd = CityDistrict(environment=e, objective='peak-shaving')
 
     # Schedule some sample buildings. The buildings' objectives are defined as "none".
     n = 10
@@ -65,48 +64,33 @@ def main(do_plot=False):
         ap.addEntity(sh)
         pv = Photovoltaic(environment=e, method=1, peak_power=8.2)
         bes.addDevice(pv)
-        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6)
+        bat = Battery(environment=e, e_el_max=12.0, p_el_max_charge=4.6, p_el_max_discharge=4.6, eta=1.0)
         bes.addDevice(bat)
-
 
     # Perform the scheduling:
     opt = CentralOptimization(city_district=cd)
     opt.solve()
-    cd.copy_schedule("price")
+    cd.copy_schedule("peak-shaving")
 
     # Print and show the city district's schedule:
     print("Schedule of the city district:")
     print(list(cd.p_el_schedule))
-
-    gs = gridspec.GridSpec(2, 1)
-    ax0 = plt.subplot(gs[0])
-    ax0.plot(list(range(e.timer.timesteps_used_horizon)), cd.p_el_schedule)
-    plt.ylim([-100.0, 200.0])
+    plt.plot(cd.p_el_schedule)
+    plt.ylim([-2.0, 5.0])
+    plt.xlabel('Time in hours')
     plt.ylabel('Electrical power in kW')
     plt.title('City district scheduling result')
-
-    ax1 = plt.subplot(gs[1], sharex=ax0)
-    ax1.plot(list(range(e.timer.timesteps_used_horizon)), e.prices.da_prices)
-    plt.ylabel('Spot market day-ahead prices in ct/kWh')
-
-    plt.xlabel('Time in hours', fontsize=12)
     plt.grid()
-
     if do_plot:
-        figManager = plt.get_current_fig_manager()
-        if hasattr(figManager, "window"):
-            figManagerWindow = figManager.window
-            if hasattr(figManagerWindow, "state"):
-                figManager.window.state("zoomed")
         plt.show()
     return
 
 
 # Conclusions:
-# Using "price" as the system level objective results in a "cheap" power profile for the considered city district.
-# In other words, this means that power is bought from the spot market during cheap tariff periods and sold during
-# expensive tariff periods incorporating the local flexibility potentials. A cost-optimal power profile is usually
-# the preferred option by a district operator who procures the electrical power for its customers.
+# Using "peak-shaving" as the system level objective results in a "flat" power profile for the considered city district.
+# In other words, this means that power peaks (caused by peak demands) and power valleys (caused by PV feed-in) are
+# mitigated using the local flexibility of the buildings' assets. A flat power profile is usually the preferred system
+# operation from the viewpoint of the network operator.
 
 
 if __name__ == '__main__':

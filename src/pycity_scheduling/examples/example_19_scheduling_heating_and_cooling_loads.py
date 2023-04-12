@@ -36,7 +36,7 @@ from pycity_scheduling.algorithms import *
 
 
 def main(do_plot=False):
-    print("\n\n------ Example 18: Scheduling Heating and Cooling Loads ------\n\n")
+    print("\n\n------ Example 19: Scheduling Heating and Cooling Loads ------\n\n")
 
     # Scheduling will be performed for a full year:
     env = factory.generate_standard_environment(step_size=3600, op_horizon=24*365, mpc_horizon=None,
@@ -74,7 +74,6 @@ def main(do_plot=False):
             if hasattr(figManagerWindow, "state"):
                 figManager.window.state("zoomed")
         plt.show()
-
 
     # Now perform the scheduling of two buildings, where the first building is equipped with the heating load and
     # a thermal heating system and the second building is equipped with the cooling load and a thermal cooling system.

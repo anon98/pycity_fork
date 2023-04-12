@@ -21,7 +21,6 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER I
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import copy
 import numpy as np
 import pyomo.environ as pyomo
 
@@ -100,55 +99,45 @@ class ExchangeADMMMPI(IterationAlgorithm, DistributedAlgorithm):
                       for entity in self._entities]
 
         # Determine which MPI processes is responsible for which node(s):
-        if self.mpi_interface.get_size() > len(self._entities):
-            mpi_process_range = np.array([i for i in range(len(self._entities))])
-        elif self.mpi_interface.get_size() < len(self._entities):
-            if self.mpi_interface.get_size() == 1:
-                mpi_process_range = np.array([0 for i in range(len(self._entities))])
-            else:
-                a, b = divmod(len(self._entities) - 1, self.mpi_interface.get_size() - 1)
-                mpi_process_range = np.repeat(np.array([i for i in range(1, self.mpi_interface.get_size())]), a)
-                for i in range(b):
-                    mpi_process_range = np.append(mpi_process_range, i + 1)
-                mpi_process_range = np.concatenate([[0], mpi_process_range])
-        else:
-            mpi_process_range = np.array([i for i in range(len(self._entities))])
-        self.mpi_process_range = np.sort(mpi_process_range)
+        self.mpi_process_range = self.mpi_interface.get_mpi_process_range(len(self._entities))
 
         # Create pyomo parameters for each entity
-        for node, entity in zip(self.nodes, self._entities):
-            node.model.beta = pyomo.Param(mutable=True, initialize=1)
-            node.model.xs_ = pyomo.Param(entity.model.t, mutable=True, initialize=0)
-            node.model.us = pyomo.Param(entity.model.t, mutable=True, initialize=0)
-            node.model.last_p_el_schedules = pyomo.Param(entity.model.t, mutable=True, initialize=0)
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            if self.mpi_interface.get_rank() == self.mpi_process_range[i]:
+                node.model.beta = pyomo.Param(mutable=True, initialize=1)
+                node.model.xs_ = pyomo.Param(entity.model.t, mutable=True, initialize=0)
+                node.model.us = pyomo.Param(entity.model.t, mutable=True, initialize=0)
+                node.model.last_p_el_schedules = pyomo.Param(entity.model.t, mutable=True, initialize=0)
         self._add_objective()
 
     def _add_objective(self):
         for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
-            obj = node.model.beta * entity.get_objective()
-            for t in range(self.op_horizon):
-                obj += self.rho / 2 * entity.model.p_el_vars[t] * entity.model.p_el_vars[t]
-            # penalty term is expanded and constant is omitted
-            if i == 0:
-                # invert sign of p_el_schedule and p_el_vars (omitted for quadratic term)
-                penalty = [(-node.model.last_p_el_schedules[t] - node.model.xs_[t] - node.model.us[t])
-                           for t in range(self.op_horizon)]
+            if self.mpi_interface.get_rank() == self.mpi_process_range[i]:
+                obj = node.model.beta * entity.get_objective()
                 for t in range(self.op_horizon):
-                    obj += self.rho * penalty[t] * entity.model.p_el_vars[t]
-            else:
-                penalty = [(-node.model.last_p_el_schedules[t] + node.model.xs_[t] + node.model.us[t])
-                           for t in range(self.op_horizon)]
-                for t in range(self.op_horizon):
-                    obj += self.rho * penalty[t] * entity.model.p_el_vars[t]
-            node.model.o = pyomo.Objective(expr=obj)
+                    obj += self.rho / 2 * entity.model.p_el_vars[t] * entity.model.p_el_vars[t]
+                # penalty term is expanded and constant is omitted
+                if i == 0:
+                    # invert sign of p_el_schedule and p_el_vars (omitted for quadratic term)
+                    penalty = [(-node.model.last_p_el_schedules[t] - node.model.xs_[t] - node.model.us[t])
+                               for t in range(self.op_horizon)]
+                    for t in range(self.op_horizon):
+                        obj += self.rho * penalty[t] * entity.model.p_el_vars[t]
+                else:
+                    penalty = [(-node.model.last_p_el_schedules[t] + node.model.xs_[t] + node.model.us[t])
+                               for t in range(self.op_horizon)]
+                    for t in range(self.op_horizon):
+                        obj += self.rho * penalty[t] * entity.model.p_el_vars[t]
+                node.model.o = pyomo.Objective(expr=obj)
         return
 
     def _presolve(self, full_update, beta, robustness, debug):
         results, params = super()._presolve(full_update, beta, robustness, debug)
-        for node, entity in zip(self.nodes, self._entities):
-            node.model.beta = self._get_beta(params, entity)
-            if full_update:
-                node.full_update(robustness)
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            if self.mpi_interface.get_rank() == self.mpi_process_range[i]:
+                node.model.beta = self._get_beta(params, entity)
+                if full_update:
+                    node.full_update(robustness)
         results["r_norms"] = []
         results["s_norms"] = []
         return results, params
@@ -234,7 +223,7 @@ class ExchangeADMMMPI(IterationAlgorithm, DistributedAlgorithm):
                 node.obj_update()
                 to_solve_nodes.append(node)
                 variables.append([entity.model.p_el_vars[t] for t in range(self.op_horizon)])
-                self._solve_nodes(results, params, to_solve_nodes, variables=variables, debug=debug)
+        self._solve_nodes(results, params, to_solve_nodes, variables=variables, debug=debug)
 
         if self.mpi_interface.get_rank() == 0:
             p_el_schedules[0] = np.array(extract_pyomo_values(self.city_district.model.p_el_vars, float),

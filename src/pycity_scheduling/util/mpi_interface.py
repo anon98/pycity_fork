@@ -27,6 +27,11 @@ import numpy as np
 
 
 class MPIInterface:
+    """
+    Supporting class that handles interactions with the Message Passing Interface (MPI) using module mpi4py.
+    MPI is used to perform parallel computations on loosely coupled machines.
+    """
+
     def __init__(self):
         self.mpi = None
         self.mpi_comm = None
@@ -42,16 +47,37 @@ class MPIInterface:
             pass
 
     def get_rank(self):
+        """
+        Return the rank of the current MPI process.
+        """
         return self.mpi_rank
 
     def get_size(self):
+        """
+        Return the size, i.e., number, of MPI processes.
+        """
         return self.mpi_size
 
     def get_comm(self):
+        """
+        Return the MPI COMM interface.
+        """
         return self.mpi_comm
 
     def get_mpi_process_range(self, n):
-        # Determine which MPI processes is responsible for which node(s):
+        """
+        Determine which MPI processes are responsible for which elements in an array.
+
+        Parameters
+        ----------
+        n : int
+            Size of the array.
+
+        Returns
+        ----------
+        mpi_process_range : np.array
+            Array, in which the number inside an entry corresponds to the responsible MPI rank.
+        """
         if self.get_size() > n:
             mpi_process_range = np.array([i for i in range(n)])
         elif self.get_size() < n:
@@ -68,16 +94,25 @@ class MPIInterface:
         mpi_process_range = np.sort(mpi_process_range)
         return mpi_process_range
 
-    def disable_multiple_printing(self):
+    def disable_multiple_printing(self, stdout=True, stderr=True):
         """
         Turn off printing for all MPI processes with MPI rank other than 0 and always flush prints for rank 0.
+
+        Parameters
+        ----------
+        stdout : bool
+            Turn off printing for stdout.
+        stderr : bool
+            Turn off printing for stderr.
         """
         sys.stdout = UnbufferedPrint(sys.stdout)
         sys.stderr = UnbufferedPrint(sys.stderr)
         if self.mpi is not None and self.mpi_size > 1:
             if self.mpi_rank > 0:
-                sys.stdout = open(os.devnull, 'w')
-                sys.stderr = open(os.devnull, 'w')
+                if stdout:
+                    sys.stdout = open(os.devnull, 'w')
+                if stderr:
+                    sys.stderr = open(os.devnull, 'w')
 
 
 class UnbufferedPrint(object):

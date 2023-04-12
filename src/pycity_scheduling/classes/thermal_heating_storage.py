@@ -111,17 +111,17 @@ class ThermalHeatingStorage(ThermalEntityHeating, tes.ThermalEnergyStorage):
             m.e_th_init = pyomo.Param(default=self.soc_init * self.e_th_max, mutable=True)
 
             def e_rule(model, t):
-                e_th_last = model.e_th_heat_vars[t - 1] if t >= 1 else model.e_th_init
-                return model.e_th_heat_vars[t] == e_th_last * (1 - self.th_loss_coeff) + \
+                e_th_last = model.e_th_heat_vars[t-1] if t >= 1 else model.e_th_init
+                return model.e_th_heat_vars[t] == e_th_last * (1.0 - self.th_loss_coeff) + \
                        m.p_th_heat_vars[t] * self.time_slot
             m.e_constr = pyomo.Constraint(m.t, rule=e_rule)
 
-            # Set bounds for the final storage capacity
-            if self.storage_end_equality:
-                m.e_th_heat_vars[self.op_horizon-1].setlb(self.e_th_max * self.soc_init)
-                m.e_th_heat_vars[self.op_horizon-1].setub(self.e_th_max * self.soc_init)
-            else:
-                m.e_th_heat_vars[self.op_horizon - 1].setlb(self.e_th_max * self.soc_init)
+            def e_end_rule(model):
+                if self.storage_end_equality:
+                    return model.e_th_heat_vars[self.op_horizon-1] == self.e_th_max * self.soc_init
+                else:
+                    return model.e_th_heat_vars[self.op_horizon-1] >= self.e_th_max * self.soc_init
+            m.e_end_constr = pyomo.Constraint(rule=e_end_rule)
 
         else:
             raise ValueError(
