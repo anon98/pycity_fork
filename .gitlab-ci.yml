@@ -19,8 +19,6 @@ prepare:
   script:
     - mkdir -p /.docker
     - cp ${CI_PROJECT_DIR}/requirements.txt /.docker/
-    - mkdir -p /.docker/gitlab-utils
-    - cp ${CI_PROJECT_DIR}/gitlab-utils/pyomo_scipampl.patch /.docker/gitlab-utils/
     - docker build -f ${DOCKER_FILE} --target python37 -t ${DOCKER_IMAGE}:python37 /.docker
     - docker push ${DOCKER_IMAGE}:python37
     - docker build -f ${DOCKER_FILE} --target python38 -t ${DOCKER_IMAGE}:python38 /.docker
