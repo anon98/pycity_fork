@@ -22,8 +22,8 @@ RUN apt-get update &&\
 RUN mkdir -p /var/scipoptsuite
 WORKDIR /var/scipoptsuite
 
-RUN wget --quiet https://scipopt.org/download/release/SCIPOptSuite-8.0.3-Linux-debian.deb &&\
-    apt-get -y install ./SCIPOptSuite-8.0.3-Linux-debian.deb &&\
+RUN wget --quiet https://scipopt.org/download/release/SCIPOptSuite-8.0.3-Linux-ubuntu.deb &&\
+    apt-get -y install ./SCIPOptSuite-8.0.3-Linux-ubuntu.deb &&\
     ln -s $(which scip) /usr/bin/scipampl
 
 # Download and install the Gurobi optimization solver (Gurobi 9.5.1).
