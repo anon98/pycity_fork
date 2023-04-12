@@ -45,7 +45,7 @@ def main(do_plot=False):
     # City district / district operator objective is peak-shaving:
     cd = CityDistrict(environment=env, objective='peak-shaving')
 
-    # Building equipped with space heating, electrical heater, thermal energy storage, and photovoltaic unit.
+    # Building equipped with space heating, electric heater, thermal energy storage, and photovoltaic unit.
     # Objective is self-consumption:
     bd1 = Building(environment=env, objective='self-consumption')
     cd.addEntity(entity=bd1, position=[0, 0])
@@ -55,7 +55,7 @@ def main(do_plot=False):
     ap1.addEntity(sh1)
     bes1 = BuildingEnergySystem(environment=env)
     bd1.addEntity(bes1)
-    eh1 = ElectricalHeater(environment=env, p_th_nom=12.0, lower_activation_limit=0.25)
+    eh1 = ElectricHeater(environment=env, p_th_nom=12.0, lower_activation_limit=0.25)
     bes1.addDevice(eh1)
     ths1 = ThermalHeatingStorage(environment=env, e_th_max=24.0)
     bes1.addDevice(ths1)
@@ -168,10 +168,10 @@ def main(do_plot=False):
 # In the convex case, the peak-shaving objective can be fully satisfied, which becomes evident from the "flat" power
 # profile of the obtained city district power curve. To perfectly balance the power demand and supply in the district,
 # the flexibility from the thermal heating storage unit is exploited together with the capability to operate the
-# electrical heater at any operation point between 0% and 100% of its nominal power. Instead, in the integer case, the
-# electrical heater can only operate at either 0% or in-between 25% and 100% of its nominal power. For this reason, the
+# electric heater at any operation point between 0% and 100% of its nominal power. Instead, in the integer case, the
+# electric heater can only operate at either 0% or in-between 25% and 100% of its nominal power. For this reason, the
 # final power profile on the city district level is not as "flat" as in the convex case. However, the integer case
-# might better reflect the actual operation conditions of a real electrical heater unit.
+# might better reflect the actual operation conditions of a real electric heater unit.
 
 
 if __name__ == '__main__':

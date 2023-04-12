@@ -23,7 +23,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 
 """
-Dictionary with electrical vehicle data from German ADAC e.V.:
+Dictionary with electric vehicle data from German ADAC e.V.:
 https://www.adac.de/rund-ums-fahrzeug/elektromobilitaet/kaufen/elektroautos-uebersicht/ (accessed on 2023/03/27)
 """
 

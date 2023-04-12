@@ -56,7 +56,7 @@ def main(do_plot=False):
         bd.addEntity(bes)
         ths = ThermalHeatingStorage(environment=e, e_th_max=40, soc_init=0.5)
         bes.addDevice(ths)
-        eh = ElectricalHeater(environment=e, p_th_nom=10)
+        eh = ElectricHeater(environment=e, p_th_nom=10)
         bes.addDevice(eh)
         ap = Apartment(environment=e)
         bd.addEntity(ap)

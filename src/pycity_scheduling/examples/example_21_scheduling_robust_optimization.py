@@ -40,7 +40,7 @@ def main(do_plot=False):
     env = factory.generate_standard_environment(step_size=900, op_horizon=6)
 
     # Make it "attractive" for the customer to shift demand into the first half of the scheduling period
-    # (compare example_20_post-processing_metrics_evaluation.py):
+    # (compare example_23_post-processing_metrics_evaluation.py):
     env.prices.tou_prices = np.array([5]*3 + [10]*3)
 
     district = classes.CityDistrict(env)
@@ -60,7 +60,7 @@ def main(do_plot=False):
     opt.solve(robustness=(6, 0.5))
 
     # Print schedules/results:
-    # **Note:** We compare the schedules from the two performed schedulings (with/without RO) with each other.
+    # We compare the schedules from the two performed schedulings (with/without RO) with each other.
     np.set_printoptions(formatter={'float': '{: >8.3f}'.format})
     print('Building p_el:')
     print(bd.p_el_ref_schedule)

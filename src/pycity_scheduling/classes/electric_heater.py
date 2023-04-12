@@ -31,7 +31,7 @@ from pycity_scheduling.classes.thermal_entity_heating import ThermalEntityHeatin
 from pycity_scheduling.classes.electrical_entity import ElectricalEntity
 
 
-class ElectricalHeater(ThermalEntityHeating, ElectricalEntity, eh.ElectricalHeater):
+class ElectricHeater(ThermalEntityHeating, ElectricalEntity, eh.ElectricalHeater):
     """
     Extension of pyCity_base class ElectricalHeater for scheduling purposes.
 
@@ -42,10 +42,10 @@ class ElectricalHeater(ThermalEntityHeating, ElectricalEntity, eh.ElectricalHeat
     p_th_nom : float
         Nominal thermal power output in [kW].
     eta : float, optional
-        Efficiency of the electrical heater. Defaults to one.
+        Efficiency of the electric heater. Defaults to one.
     lower_activation_limit : float, optional (only adhered to in integer mode)
-        Must be in [0, 1]. Lower activation limit of the electrical heater
-        as a percentage of the rated power. When the electrical heater is
+        Must be in [0, 1]. Lower activation limit of the electric heater
+        as a percentage of the rated power. When the electric heater is
         in operation, its power must be zero or between the lower activation
         limit and its rated power.
 
@@ -105,6 +105,6 @@ class ElectricalHeater(ThermalEntityHeating, ElectricalEntity, eh.ElectricalHeat
 
         else:
             raise ValueError(
-                "Mode %s is not implemented by class ElectricalHeater." % str(mode)
+                "Mode %s is not implemented by class ElectricHeater." % str(mode)
             )
         return

@@ -320,7 +320,7 @@ class TestBuilding(unittest.TestCase):
         sh = SpaceHeating(env, loadcurve=loadcurve)
         ap.addEntity(sh)
 
-        eh = ElectricalHeater(env, 20)
+        eh = ElectricHeater(env, 20)
         bes.addDevice(eh)
 
         self.bd.populate_model(model, robustness=(3, 0.5))
@@ -1188,15 +1188,15 @@ class TestElectricalEntity(unittest.TestCase):
         return
 
 
-class TestElectricalHeater(unittest.TestCase):
+class TestElectricHeater(unittest.TestCase):
     def setUp(self):
         e = get_env(4, 8)
-        self.eh = ElectricalHeater(e, 10, 10, 0.8)
+        self.eh = ElectricHeater(e, 10, 10, 0.8)
         return
 
     def test_lower_activation(self):
         e = get_env(4, 8)
-        eh = ElectricalHeater(e, 10, lower_activation_limit=0.5)
+        eh = ElectricHeater(e, 10, lower_activation_limit=0.5)
         m = pyomo.ConcreteModel()
         eh.populate_model(m, "integer")
         eh.update_model("integer")
@@ -1212,7 +1212,7 @@ class TestElectricalHeater(unittest.TestCase):
 
     def test_update_schedule(self):
         e = get_env(2, 2)
-        eh = ElectricalHeater(e, 10, lower_activation_limit=0.5)
+        eh = ElectricHeater(e, 10, lower_activation_limit=0.5)
         m = pyomo.ConcreteModel()
         eh.populate_model(m)
         eh.update_model()
@@ -1232,8 +1232,8 @@ class TestElectricVehicle(unittest.TestCase):
     def setUp(self):
         e = get_env(6, 9)
         self.ct = [1, 1, 1, 0, 0, 0, 1, 1, 1]
-        self.ev = ElectricalVehicle(e, 10, 20, p_el_max_discharge=20, soc_init=0.5, charging_time=self.ct,
-                                    simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
+        self.ev = ElectricVehicle(e, 10, 20, p_el_max_discharge=20, soc_init=0.5, charging_time=self.ct,
+                                  simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         return
 
     def test_populate_model(self):
@@ -1305,18 +1305,17 @@ class TestElectricVehicle(unittest.TestCase):
 
     def test_no_charge_time(self):
         e = get_env(6, 9)
-        ev = ElectricalVehicle(e, 37.0, 11.0)
+        ev = ElectricVehicle(e, 37.0, 11.0)
         assert_equal_array(ev.charging_time, [1]*9)
         e = get_env(28, 96*24-12)
-        ev = ElectricalVehicle(e, 37.0, 11.0)
+        ev = ElectricVehicle(e, 37.0, 11.0)
         assert_equal_array(ev.charging_time, np.tile([1] * 24 + [0] * 48 + [1] * 24, 24)[:-12])
         return
 
     def test_no_discharge(self):
         model = pyomo.ConcreteModel()
         e = get_env(6, 9)
-        ev = ElectricalVehicle(e, 10.0, 40.0, charging_time=self.ct, simulate_driving=True, minimum_soc_end=1.0,
-                               eta=1.0)
+        ev = ElectricVehicle(e, 10.0, 40.0, charging_time=self.ct, simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         ev.populate_model(model)
         ev.update_model()
         model.o = pyomo.Objective(expr=ev.model.p_el_vars[0] + ev.model.p_el_vars[1])
@@ -1329,8 +1328,8 @@ class TestElectricVehicle(unittest.TestCase):
 
         model = pyomo.ConcreteModel()
         e = get_env(6, 9)
-        ev = ElectricalVehicle(e, 10.0, 40.0, p_el_max_discharge=8, charging_time=self.ct, simulate_driving=True,
-                               minimum_soc_end=1.0, eta=1.0)
+        ev = ElectricVehicle(e, 10.0, 40.0, p_el_max_discharge=8, charging_time=self.ct, simulate_driving=True,
+                             minimum_soc_end=1.0, eta=1.0)
         ev.populate_model(model)
         ev.update_model()
         model.o = pyomo.Objective(expr=ev.model.p_el_vars[0] + ev.model.p_el_vars[1])
@@ -1347,8 +1346,8 @@ class TestElectricVehicle(unittest.TestCase):
             with self.subTest("step_size: {}".format(step_size)):
                 e = get_env(step_size, 12, step_size)
                 self.ct = [1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0]
-                self.ev = ElectricalVehicle(e, 10, 20, 0.5, charging_time=self.ct, simulate_driving=True,
-                                            minimum_soc_end=0.8, eta=1.0)
+                self.ev = ElectricVehicle(e, 10, 20, 0.5, charging_time=self.ct, simulate_driving=True,
+                                          minimum_soc_end=0.8, eta=1.0)
                 self.ev.minimum_soc_end = 1.0
                 m = pyomo.ConcreteModel()
                 self.ev.populate_model(m)
@@ -1365,8 +1364,8 @@ class TestElectricVehicle(unittest.TestCase):
 
         step_size = 12
         e = get_env(step_size, 12, step_size)
-        self.ev = ElectricalVehicle(e, 10, 20, 20, soc_init=0.5, charging_time=self.ct, simulate_driving=True,
-                                    minimum_soc_end=1.0, eta=1.0)
+        self.ev = ElectricVehicle(e, 10, 20, 20, soc_init=0.5, charging_time=self.ct, simulate_driving=True,
+                                  minimum_soc_end=1.0, eta=1.0)
         m = pyomo.ConcreteModel()
         self.ev.populate_model(m)
         self.ev.update_model(m)
@@ -1379,25 +1378,25 @@ class TestElectricVehicle(unittest.TestCase):
 
     def test_bad_charging_times(self):
         e = get_env(3, 12)
-        self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0],
-                                    simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
+        self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+                                  simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         with self.assertWarns(UserWarning):
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
-                                        simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
+            self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+                                      simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         with self.assertWarns(UserWarning):
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0],
-                                        simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
+            self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0],
+                                      simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         with self.assertWarns(UserWarning):
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
-                                        simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
+            self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
+                                      simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         return
 
     def test_inital_charging_times(self):
         for step_size in [1, 2, 3, 6, 12]:
             with self.subTest("step_size: {}".format(step_size)):
                 e = get_env(step_size, 12, step_size)
-                self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.8, charging_time=[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
-                                            simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
+                self.ev = ElectricVehicle(e, 10, 8, soc_init=0.8, charging_time=[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+                                          simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
                 m = pyomo.ConcreteModel()
                 self.ev.populate_model(m)
                 obj = 0

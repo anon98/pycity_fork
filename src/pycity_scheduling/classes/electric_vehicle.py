@@ -30,9 +30,9 @@ from pycity_scheduling.classes.battery import Battery
 from pycity_scheduling import util
 
 
-class ElectricalVehicle(Battery):
+class ElectricVehicle(Battery):
     """
-    Class representing an electrical vehicle for scheduling purposes.
+    Class representing an electric vehicle for scheduling purposes.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ class ElectricalVehicle(Battery):
     soc_init : float, optional
         Initial state of charge. Defaults to 50%.
     charging_time : array of binaries, optional
-        Indicator when electrical vehicle can be charged.
+        Indicator when electric vehicle can be charged.
 
         - `charging_time[t] == 0`: EV cannot be charged in t
         - `charging_time[t] == 1`: EV can be charged in t
@@ -103,7 +103,7 @@ class ElectricalVehicle(Battery):
                  eta=1.0):
         super().__init__(environment, e_el_max, p_el_max_charge, p_el_max_discharge, soc_init, eta,
                          storage_end_equality=False)
-        self._kind = "electricalvehicle"
+        self._kind = "electricvehicle"
         self._long_id = "EV_" + self._id_string
         self.charging_time_initial = charging_time
         self.ct_pattern = ct_pattern
@@ -197,7 +197,7 @@ class ElectricalVehicle(Battery):
             m.e_constr = pyomo.Constraint(m.t, rule=e_rule)
         else:
             raise ValueError(
-                "Mode %s is not implemented by class ElectricalVehicle." % str(mode)
+                "Mode %s is not implemented by class ElectricVehicle." % str(mode)
             )
         return
 

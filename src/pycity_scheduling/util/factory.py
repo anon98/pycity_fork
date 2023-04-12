@@ -24,8 +24,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 import numpy as np
 import random
-from shapely.geometry import Point
 import os
+
 from pycity_scheduling.classes import *
 from pycity_scheduling.data.tabula_data import tabula_building_data as tbd
 from pycity_scheduling.data.ev_data import ev_data as evd
@@ -286,15 +286,15 @@ def generate_tabula_buildings(environment,
                 ev_data = random.choice(list(evd.values()))
                 ev_charging_time = [0] + [1] * (environment.timer.simu_horizon - 1)
                 soc = random.uniform(0.2, 0.75)
-                ev = ElectricalVehicle(environment,
-                                       e_el_max=ev_data['e_el_storage_max'],
-                                       p_el_max_charge=11.0,
-                                       soc_init=soc,
-                                       charging_time=ev_charging_time,
-                                       ct_pattern='daily',
-                                       simulate_driving=False,
-                                       minimum_soc_end=0.8,
-                                       eta=0.9)
+                ev = ElectricVehicle(environment,
+                                     e_el_max=ev_data['e_el_storage_max'],
+                                     p_el_max_charge=11.0,
+                                     soc_init=soc,
+                                     charging_time=ev_charging_time,
+                                     ct_pattern='daily',
+                                     simulate_driving=False,
+                                     minimum_soc_end=0.8,
+                                     eta=0.9)
                 if not dummy_building:
                     ap.addEntity(ev)
 
@@ -437,7 +437,7 @@ def generate_tabula_district(environment,
                                                    seed+1,
                                                    mpi_interface
                                                    ))
-    positions = [Point(0, i+1) for i in range(len(building_list))]
+    positions = [[0, i+1] for i in range(len(building_list))]
     cd.addMultipleEntities(building_list, positions)
     return cd
 
@@ -477,7 +477,7 @@ def generate_simple_building(env, fl=0, sh=0, eh=0, ths=0, bat=0):
     if sh:
         ap.addEntity(SpaceHeating(env, loadcurve=np.full(ti.simu_horizon, sh)))
     if eh:
-        bes.addDevice(ElectricalHeater(env, p_th_nom=eh))
+        bes.addDevice(ElectricHeater(env, p_th_nom=eh))
     if ths:
         bes.addDevice(ThermalHeatingStorage(env, e_th_max=ths, soc_init=0.5))
     if bat:

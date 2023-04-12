@@ -96,7 +96,7 @@ class DistrictAnalyzer:
                 if isinstance(en, SpaceHeating):
                     total_heat_demand = np.add(total_heat_demand, en.p_th_heat_schedule)
                     building_heat_demand = en.p_th_heat_schedule
-                if isinstance(en, ElectricalHeater):
+                if isinstance(en, ElectricHeater):
                     device = 'EH'
                     eta = en.eta
                 if isinstance(en, HeatPump):
@@ -264,9 +264,9 @@ class DistrictAnalyzer:
         for en in self.city_district.get_all_entities():
             if isinstance(en, DeferrableLoad):
                 DL_schedule = self.add_vectors(DL_schedule, en.model.p_el_vars)
-            if isinstance(en, Battery) and isinstance(en, ElectricalVehicle):
+            if isinstance(en, Battery) and isinstance(en, ElectricVehicle):
                 EV_schedule = self.add_vectors(EV_schedule, en.model.p_el_vars)
-            if isinstance(en, Battery) and not isinstance(en, ElectricalVehicle):
+            if isinstance(en, Battery) and not isinstance(en, ElectricVehicle):
                 Bat_schedule = self.add_vectors(Bat_schedule, en.model.p_el_vars)
         self.DLSchedule = DL_schedule
         self.BatSchedule = Bat_schedule
@@ -283,7 +283,7 @@ class DistrictAnalyzer:
         for en in self.city_district.get_all_entities():
             if isinstance(en, CombinedHeatPower):
                 CHP_schedule = self.add_vectors(CHP_schedule, en.model.p_el_vars)
-            if isinstance(en, ElectricalHeater):
+            if isinstance(en, ElectricHeater):
                 EH_schedule = self.add_vectors(EH_schedule, en.model.p_el_vars)
             if isinstance(en, HeatPump):
                 HP_schedule = self.add_vectors(HP_schedule, en.model.p_el_vars)
@@ -400,7 +400,7 @@ class DistrictAnalyzer:
         entity_list = []
         index = 0
         for en in self.city_district.get_all_entities():
-            if entity_class == Battery and isinstance(en, Battery) and not isinstance(en, ElectricalVehicle):
+            if entity_class == Battery and isinstance(en, Battery) and not isinstance(en, ElectricVehicle):
                 schedule = self.convert_pyomo_to_numpy(en.model.p_el_vars)
                 entity_list.append([])
                 entity_list[index].append(en)

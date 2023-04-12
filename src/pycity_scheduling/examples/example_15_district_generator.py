@@ -51,7 +51,7 @@ def main(do_plot=False):
         'SFH.2016': 0.2,
     }
 
-    # 50% of the single-family houses are equipped with heat pump, 10% with boiler, and 40% with electrical heater:
+    # 50% of the single-family houses are equipped with heat pump, 10% with boiler, and 40% with electric heater:
     sfh_heating_distribution = {
         'HP': 0.5,
         'BL': 0.1,
@@ -80,7 +80,7 @@ def main(do_plot=False):
         'MFH.2016': 0.2,
     }
 
-    # 40% of the multi-family houses are equipped with heat pump, 20% with boiler, and 40% with electrical heater:
+    # 40% of the multi-family houses are equipped with heat pump, 20% with boiler, and 40% with electric heater:
     mfh_heating_distribution = {
         'HP': 0.4,
         'BL': 0.2,

@@ -39,13 +39,13 @@ __all__ = [
 
 def compute_profile(timer, profile, pattern=None):
     """
-    Compute a load series profile for an electrical vehicle.
+    Compute a load series profile for an electric vehicle.
 
     Parameters
     ----------
     timer : pycity_scheduling.classes.Timer
     profile : array of binaries
-        Indicator when electrical vehicle can be charged.
+        Indicator when electric vehicle can be charged.
 
         - `profile[t] == 0`: EV cannot be charged in t
         - `profile[t] == 1`: EV can be charged in t
