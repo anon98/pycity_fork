@@ -64,17 +64,13 @@ class DualDecompositionMPI(IterationAlgorithm, DistributedAlgorithm):
         Step size for the dual decomposition algorithm.
     max_iterations : int, optional
         Maximum number of dual decomposition iterations.
-    throw_exception_on_iteration_limit : bool, optional
-        Throw an exception if the maximum number of dual decomposition iterations is reached.
-        This will terminate the pycity_scheduling applications.
     robustness : tuple, optional
         Tuple of two floats. First entry defines how many time steps are
         protected from deviations. Second entry defines the magnitude of
         deviations which are considered.
     """
     def __init__(self, city_district, mpi_interface, solver=DEFAULT_SOLVER, solver_options=DEFAULT_SOLVER_OPTIONS,
-                 mode="convex", eps_primal=0.1, rho=2.0, max_iterations=10000, throw_exception_on_iteration_limit=True,
-                 robustness=None):
+                 mode="convex", eps_primal=0.1, rho=2.0, max_iterations=10000, robustness=None):
         super(DualDecompositionMPI, self).__init__(city_district, solver, solver_options, mode)
 
         self.mpi_interface = mpi_interface
@@ -108,8 +104,7 @@ class DualDecompositionMPI(IterationAlgorithm, DistributedAlgorithm):
                 obj = node.model.beta * entity.get_objective()
                 if i == 0:
                     # penalty term is expanded and constant is omitted
-                    # invert sign of p_el_schedule and p_el_vars (omitted for quadratic
-                    # term)
+                    # invert sign of p_el_schedule and p_el_vars (omitted for quadratic term)
                     for t in range(self.op_horizon):
                         obj -= node.model.lambdas[t] * entity.model.p_el_vars[t]
                 else:

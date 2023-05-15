@@ -135,19 +135,20 @@ class ElectricVehicle(Battery):
         self.required_charges = np.full_like(self.charging_durations, self.minimum_soc_end * e_el_max, dtype=np.float)
 
         if len(self.charging_time) > 0:
-            # In first charging cycle the required charge is determined by soc_init and is not necessarily 80%.
-            self.required_charges[0] = (1 - soc_init) * e_el_max
+            # In first charging cycle the required charge is determined by the difference between soc_init and
+            # minimum_soc_end.
+            self.required_charges[0] = (1 - (minimum_soc_end - soc_init)) * e_el_max
 
             if self.charging_time[-1]:
-                # Limit charge at end of simu horizon to not become infeasible.
+                # Limit charge at end of simulation horizon to not become infeasible.
                 self.required_charges[-1] = min(self.required_charges[-1], self.charging_durations[-1] *
                                                 self.time_slot * p_el_max_charge * self.eta_charge)
 
         if any(self.required_charges > self.charging_durations * self.time_slot * p_el_max_charge *
                self.eta_charge):
             warn("Charging pattern results in infeasible constraints.")
-            if self.simulate_driving:
-                self.new_var("p_el_drive")
+        if self.simulate_driving:
+            self.new_var("p_el_drive")
 
     def populate_model(self, model, mode="convex"):
         """
@@ -170,13 +171,18 @@ class ElectricVehicle(Battery):
         m = self.model
 
         if mode == "convex" or "integer":
+            # Replace coupling constraints from Battery class
+            m.del_component("e_constr")
+
             # Simulate power consumption while driving
             if self.simulate_driving:
                 m.p_el_drive_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, None), initialize=0)
 
-            # Replace coupling constraints from Battery class
-            m.del_component("e_constr")
-            m.del_component("e_end_constr")
+            # Reset e_el bounds
+            for t in self.op_time_vec:
+                m.e_el_vars[t].setub(self.e_el_max)
+                m.e_el_vars[t].setlb(self.soc_init * self.e_el_max)
+            m.e_el_vars[self.op_horizon-1].setlb(self.minimum_soc_end * self.e_el_max)
 
             def e_rule(model, t):
                 if self.simulate_driving:
@@ -192,7 +198,7 @@ class ElectricVehicle(Battery):
                          - (1.0 / self.eta_discharge) * model.p_el_supply_vars[t])
                         * self.time_slot
                     )
-                e_el_last = model.e_el_vars[t - 1] if t >= 1 else model.e_el_init
+                e_el_last = model.e_el_vars[t-1] if t >= 1 else model.e_el_init
                 return model.e_el_vars[t] == e_el_last + delta
             m.e_constr = pyomo.Constraint(m.t, rule=e_rule)
         else:
@@ -210,11 +216,6 @@ class ElectricVehicle(Battery):
         charging_time = self.charging_time[self.op_slice]
         # Is true if t is before the initial charging period.
         is_initial = not any(self.charging_time[:timestep])
-
-        # Reset e_el bounds
-        for t in self.op_time_vec:
-            m.e_el_vars[t].setub(self.e_el_max)
-            m.e_el_vars[t].setlb(0.0)
 
         for t in self.op_time_vec:
             if charging_time[t]:
@@ -235,25 +236,12 @@ class ElectricVehicle(Battery):
                     # Remain at soc_init before the first charging period is reached.
                     m.e_el_vars[t].setub(self.soc_init * self.e_el_max)
                     m.e_el_vars[t].setlb(self.soc_init * self.e_el_max)
-                else:
-                    m.e_el_vars[t].setub(0.2 * self.e_el_max)
-                    m.e_el_vars[t].setlb(0.2 * self.e_el_max)
 
             if t + 1 < self.op_horizon:
                 if charging_time[t] and not charging_time[t+1]:
                     # SOC at the end of the optimization horizon:
                     m.e_el_vars[t].setub(self.e_el_max)
-                    m.e_el_vars[t].setlb(self.minimum_soc_end*self.e_el_max)
-
-        if charging_time[-1]:
-            current_ts = (timestep + self.op_horizon - 1) % int(24 / self.time_slot)
-            i = self.charging_indices[current_ts]
-
-            first_ts = self.starting_timesteps[i]
-            portion_charge = (current_ts - first_ts + 1) * self.required_charges[i] / self.charging_durations[i]
-            starting_charge = 0.2 * self.e_el_max if i != 0 else self.soc_init * self.e_el_max
-            m.e_el_vars[self.op_horizon-1].setub(starting_charge + portion_charge)
-            m.e_el_vars[self.op_horizon-1].setlb(starting_charge + portion_charge)
+                    m.e_el_vars[t].setlb(self.minimum_soc_end * self.e_el_max)
         return
 
     def get_objective(self, coeff=1):

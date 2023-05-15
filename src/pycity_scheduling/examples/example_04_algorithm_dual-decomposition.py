@@ -69,7 +69,7 @@ def main(do_plot=False):
     # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage,
     # and an electric vehicle:
     bd2 = Building(environment=e, objective='price')
-    cd.addEntity(entity=bd2, position=[0, 0])
+    cd.addEntity(entity=bd2, position=[0, 1])
     bes = BuildingEnergySystem(environment=e)
     bd2.addEntity(bes)
     ths = ThermalHeatingStorage(environment=e, e_th_max=35, soc_init=0.5)
@@ -85,12 +85,12 @@ def main(do_plot=False):
     ap.addEntity(cl)
     sh = SpaceHeating(environment=e, method=0, loadcurve=load)
     ap.addEntity(sh)
-    ev = ElectricVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, charging_time=[0, 1],
-                         simulate_driving=True, minimum_soc_end=1.0)
+    ev = ElectricVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.1, charging_time=[1, 1],
+                         simulate_driving=False, minimum_soc_end=0.9)
     ap.addEntity(ev)
 
     # Perform the scheduling:
-    opt = DualDecomposition(city_district=cd, rho=0.1, eps_primal=1.0)
+    opt = DualDecomposition(city_district=cd, rho=0.1, eps_primal=1.0, max_iterations=1000)
     results = opt.solve()
     cd.copy_schedule("dual_decomposition")
 
@@ -117,7 +117,7 @@ def main(do_plot=False):
 # If the distributed dual decomposition optimization algorithm is applied, the two buildings are scheduled in a way
 # so that both the local and system level objectives are satisfied. Local flexibility is used to achieve the system
 # level objective. The scheduling results are close to the ones of the central algorithm, which demonstrates the
-# correctness of the distributed algorithm.
+# correctness of the distributed algorithm. Nevertheless, Dual Decomposition can be slow in convergence!
 
 
 if __name__ == '__main__':

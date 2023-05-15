@@ -74,10 +74,10 @@ def main(do_plot=False):
     bat = Battery(environment=e, e_el_max=4.8, p_el_max_charge=3.6, p_el_max_discharge=3.6, eta=1.0)
     bes.addDevice(bat)
 
-    # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage and
-    # an electric vehicle:
+    # Building no. two comes with deferrable load, curtailable load, space heating, chp unit, thermal energy storage,
+    # and an electric vehicle:
     bd2 = Building(environment=e, objective='price')
-    cd.addEntity(entity=bd2, position=[0, 0])
+    cd.addEntity(entity=bd2, position=[0, 1])
     bes = BuildingEnergySystem(environment=e)
     bd2.addEntity(bes)
     ths = ThermalHeatingStorage(environment=e, e_th_max=35, soc_init=0.5)
@@ -93,8 +93,8 @@ def main(do_plot=False):
     load = np.array([20.0, 20.0])
     sh = SpaceHeating(environment=e, method=0, loadcurve=load)
     ap.addEntity(sh)
-    ev = ElectricVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.65, charging_time=[0, 1],
-                         simulate_driving=True, minimum_soc_end=0.8)
+    ev = ElectricVehicle(environment=e, e_el_max=37.0, p_el_max_charge=22.0, soc_init=0.1, charging_time=[1, 1],
+                         simulate_driving=False, minimum_soc_end=0.9)
     ap.addEntity(ev)
 
     # Perform the scheduling with the Central Optimization algorithm as reference:
@@ -115,8 +115,8 @@ def main(do_plot=False):
     print(list(cd.p_el_schedule))
 
     # Perform the scheduling with the Exchange MIQP ADMM algorithm and a constrained x_update
-    opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='constrained', rho=5.0, eps_primal=0.01,
-                           eps_dual=0.01, max_iterations=500)
+    opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='constrained', rho=2.0, eps_primal=0.001,
+                           eps_dual=0.25, max_iterations=500)
     results = opt.solve()
     cd.copy_schedule("exchange_miqp_admm-constrained")
 
@@ -137,8 +137,8 @@ def main(do_plot=False):
     # Perform the scheduling with the Exchange MIQP ADMM algorithm and an unconstrained x_update (currently only works
     # with commercial solvers):
     if DEFAULT_SOLVER is "gurobi_direct" or DEFAULT_SOLVER is "gurobi_persistent" or DEFAULT_SOLVER is "cplex":
-        opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='unconstrained', rho=5.0,
-                               eps_primal=0.001, eps_dual=0.001, max_iterations=500)
+        opt = ExchangeMIQPADMM(city_district=cd, mode='integer', x_update_mode='unconstrained', rho=2.0,
+                               eps_primal=0.001, eps_dual=0.25, max_iterations=500)
 
         results = opt.solve()
         cd.copy_schedule("exchange_miqp_admm-unconstrained")

@@ -94,8 +94,7 @@ class DualDecomposition(IterationAlgorithm, DistributedAlgorithm):
             obj = node.model.beta * entity.get_objective()
             if i == 0:
                 # penalty term is expanded and constant is omitted
-                # invert sign of p_el_schedule and p_el_vars (omitted for quadratic
-                # term)
+                # invert sign of p_el_schedule and p_el_vars (omitted for quadratic term)
                 for t in range(self.op_horizon):
                     obj -= node.model.lambdas[t] * entity.model.p_el_vars[t]
             else:

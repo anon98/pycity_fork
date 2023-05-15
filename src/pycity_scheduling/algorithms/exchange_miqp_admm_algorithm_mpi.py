@@ -431,7 +431,6 @@ class ExchangeMIQPADMMMPI(IterationAlgorithm, DistributedAlgorithm):
     def _iteration(self, results, params, debug):
         super(ExchangeMIQPADMMMPI, self)._iteration(results, params, debug)
         self.counter += 1
-        #print("Iteration", self.counter)
 
         # fill parameters if not already present
         if "p_el" not in params:
@@ -589,9 +588,6 @@ class ExchangeMIQPADMMMPI(IterationAlgorithm, DistributedAlgorithm):
             self.mpi_interface.get_comm().Bcast(s_norm, root=0)
         results["r_norms"].append(r_norm[0])
         results["s_norms"].append(s_norm[0])
-
-        #print("exch_primal: ", results["r_norms"][-1])
-        #print("exch_dual: ", results["s_norms"][-1])
 
         # save parameters for another iteration
         params["p_el"] = p_el_schedules

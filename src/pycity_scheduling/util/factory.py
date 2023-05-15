@@ -284,17 +284,16 @@ def generate_tabula_buildings(environment,
 
             if ev_list[ap_counter]:
                 ev_data = random.choice(list(evd.values()))
-                ev_charging_time = [0] + [1] * (environment.timer.simu_horizon - 1)
+                ev_charging_time = np.ones(environment.timer.simu_horizon)
                 soc = random.uniform(0.2, 0.75)
                 ev = ElectricVehicle(environment,
                                      e_el_max=ev_data['e_el_storage_max'],
                                      p_el_max_charge=11.0,
                                      soc_init=soc,
                                      charging_time=ev_charging_time,
-                                     ct_pattern='daily',
                                      simulate_driving=False,
                                      minimum_soc_end=0.8,
-                                     eta=0.9)
+                                     eta=0.95)
                 if not dummy_building:
                     ap.addEntity(ev)
 
@@ -328,7 +327,7 @@ def generate_tabula_buildings(environment,
         if bat_list[i]:
             p_el = 13.5 * b['apartments']
             bat = Battery(environment, e_el_max=p_el, p_el_max_charge=4.6,
-                          p_el_max_discharge=4.6, soc_init=0.5)
+                          p_el_max_discharge=4.6, soc_init=0.5, eta=0.95)
             if not dummy_building:
                 bes.addDevice(bat)
 

@@ -30,8 +30,6 @@ import pycity_scheduling.util.debug as debug
 import pycity_scheduling.util.mpi_interface as mpi
 from pycity_scheduling.util.metric import self_consumption, autarky
 from pycity_scheduling.algorithms import *
-from pycity_scheduling.classes import *
-from pycity_scheduling.util.district_analyzer import DistrictAnalyzer
 
 
 # In this example, the power schedule for a city district scenario is determined by means of real parallel distributed
@@ -126,6 +124,8 @@ def main(do_plot=False):
     # Hierarchically print the district and all buildings/assets:
     debug.print_district(district, 2)
 
+    """
+
     # Perform the city district scheduling using the central optimization algorithm as a reference:
     print("\n### Central Algorithm ###\n")
     opt = CentralOptimization(district)
@@ -173,11 +173,13 @@ def main(do_plot=False):
     print("")
     print("Self-consumption rate: {: >4.2f}".format(self_consumption(district)))
     print("Autarky rate: {: >4.2f}".format(autarky(district)))
+    
+    """
 
     # Perform the city district scheduling using the Exchange MIQP ADMM optimization algorithm (constrained):
     print("\n### Exchange MIQP ADMM Algorithm MPI (Constrained) ###\n")
     opt = ExchangeMIQPADMMMPI(district, mpi_interface, mode='integer', x_update_mode='constrained', eps_primal=0.1,
-                              eps_dual=0.1, rho=1.0, max_iterations=200)
+                              eps_dual=0.1, rho=0.5, max_iterations=200)
     results = opt.solve()
     district.copy_schedule("exchange_miqp_admm-constrained")
 
