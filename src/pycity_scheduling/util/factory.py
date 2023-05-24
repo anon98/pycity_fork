@@ -285,7 +285,7 @@ def generate_tabula_buildings(environment,
             if ev_list[ap_counter]:
                 ev_data = random.choice(list(evd.values()))
                 ev_charging_time = np.ones(environment.timer.simu_horizon)
-                soc = random.uniform(0.2, 0.75)
+                soc = random.uniform(0.2, 0.4)
                 ev = ElectricVehicle(environment,
                                      e_el_max=ev_data['e_el_storage_max'],
                                      p_el_max_charge=11.0,
