@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -27,7 +27,7 @@ import os
 import os.path as op
 import matplotlib.pyplot as plt
 
-from pycity_scheduling.classes import Battery, ElectricalVehicle, CombinedHeatPower
+from pycity_scheduling.classes import Battery, ElectricVehicle, CombinedHeatPower
 
 
 _known_varnames = {
@@ -93,7 +93,7 @@ def plot_entity(entity, schedule=None, ax=None, title=None):
         unknown_vars.discard("p_el_demand")
         unknown_vars.discard("p_el_supply")
         unknown_vars.discard("p_state")
-    if isinstance(entity, ElectricalVehicle):
+    if isinstance(entity, ElectricVehicle):
         unknown_vars.discard("p_el_drive")
         unknown_vars.discard("p_state")
     if isinstance(entity, CombinedHeatPower):

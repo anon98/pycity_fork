@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -24,31 +24,29 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 # Specify different third-party mathematical programming solvers and solver options:
 
-BONMIN_SOLVER = "bonmin"
-BONMIN_SOLVER_OPTIONS = {'solve': {'options': {'bonmin.algorithm': 'b-hyb',
-                                               'bonmin.allowable_gap': 1e-10,
-                                               'bonmin.allowable_fraction_gap': 1e-4}}}
+GUROBI_DIRECT_SOLVER = "gurobi_direct"
+GUROBI_DIRECT_SOLVER_OPTIONS = {'solve': {'options': {'OutputFlag': 0,
+                                                      'LogToConsole': 0,
+                                                      'Logfile': "",
+                                                      "Method": -1}}}
+
+GUROBI_PERSISTENT_SOLVER = "gurobi_persistent"
+GUROBI_PERSISTENT_SOLVER_OPTIONS = {'solve': {'options': {'OutputFlag': 0,
+                                                          'LogToConsole': 0,
+                                                          'Logfile': "",
+                                                          "Method": -1}}}
+
+SCIP_SOLVER = "scip"
+SCIP_SOLVER_OPTIONS = {'solve': {'options': {}}}
+
+BONMIN_SOLVER = "couenne"
+BONMIN_SOLVER_OPTIONS = {'solve': {'options': {}}}
 
 CPLEX_SOLVER = "cplex"
 CPLEX_SOLVER_OPTIONS = {'solve': {'options': {}}}
 
 GLPK_SOLVER = "glpk"
 GLPK_SOLVER_OPTIONS = {'solve': {'options': {}}}
-
-GUROBI_DIRECT_SOLVER = "gurobi_direct"
-GUROBI_DIRECT_SOLVER_OPTIONS = {'solve': {'options': {'OutputFlag': 0,
-                                                      'LogToConsole': 0,
-                                                      'Logfile': "",
-                                                      "Method": 1}}}
-
-GUROBI_PERSISTENT_SOLVER = "gurobi_persistent"
-GUROBI_PERSISTENT_SOLVER_OPTIONS = {'solve': {'options': {'OutputFlag': 0,
-                                                          'LogToConsole': 0,
-                                                          'Logfile': "",
-                                                          "Method": 1}}}
-
-SCIP_SOLVER = "scip"
-SCIP_SOLVER_OPTIONS = {'solve': {'options': {'numerics/feastol': 1e-6}}}
 
 
 # Set the default mathematical programming solver to be used by the pycity_scheduling framework:

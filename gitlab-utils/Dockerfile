@@ -14,44 +14,38 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TZ Etc/UTC
 
 RUN apt-get update &&\
-    apt-get install -y wget software-properties-common curl apt-utils git
+    apt-get install -y apt-utils software-properties-common build-essential wget curl git mpich
 
-# Download and install the SCIP optimization solver (SCIPOptSuite 8.0.0).
-# Important note: You are allowed to retrieve a copy of SCIP for research purposes as a member of a noncommercial and academic institution only.
-# To get a copy of SCIP, you need to certify that you are a member of a noncommercial, academic institution and accept the ZIB Academic License.
-# Commercial use requires a commercial license.
+# Download and install the SCIP optimization solver (SCIPOptSuite 8.0.3).
+# Commercial use may require a commercial license.
 # For further information visit: https://scipopt.org/#scipoptsuite
+RUN mkdir -p /var/scipoptsuite
+WORKDIR /var/scipoptsuite
 
-RUN wget --quiet https://www.scipopt.org/download/release/SCIPOptSuite-8.0.0-Linux-ubuntu.deb &&\
-    apt-get install -y gcc g++ gfortran liblapack3 libtbb2 libcliquer1 libopenblas-dev libgslcblas0 patchelf &&\
-    apt install -y $SCIPAMPL_BASE_DIR/SCIPOptSuite-8.0.0-Linux-ubuntu.deb &&\
-    rm $SCIPAMPL_BASE_DIR/SCIPOptSuite-8.0.0-Linux-ubuntu.deb
+RUN wget --quiet https://scipopt.org/download/release/SCIPOptSuite-8.0.3-Linux-ubuntu.deb &&\
+    apt-get -y install ./SCIPOptSuite-8.0.3-Linux-ubuntu.deb &&\
+    ln -s $(which scip) /usr/bin/scipampl
 
-# Download and install the Gurobi optimization solver (Gurobi 9.1.2).
-# Important note: You are allowed to retrieve a copy of Gurobi for research purposes as a member of a non-commercial and academic institution only.
+# Download and install the Gurobi optimization solver (Gurobi 9.5.1).
+# Important note: You are allowed to retrieve a copy of Gurobi for research purposes as a member of a non-commercial
+# and academic institution only.
 # To get a copy of Gurobi, you need to request for an academic license at Gurobi Optimization, LLC.
 # Commercial use requires a commercial license.
 # For further information visit: https://www.gurobi.com/
 RUN mkdir -p /opt/gurobi
 ENV GUROBI_BASE_DIR="/opt/gurobi"
-ENV GUROBI_HOME="${GUROBI_BASE_DIR}/gurobi912/linux64"
+ENV GUROBI_HOME="${GUROBI_BASE_DIR}/gurobi951/linux64"
 
 RUN cd $GUROBI_BASE_DIR &&\
-    wget --quiet https://packages.gurobi.com/9.1/gurobi9.1.2_linux64.tar.gz &&\
-    tar xfz gurobi9.1.2_linux64.tar.gz &&\
-    rm $GUROBI_BASE_DIR/gurobi9.1.2_linux64.tar.gz &&\
-	chmod -R 755 $GUROBI_BASE_DIR/gurobi912 &&\
+    wget --quiet https://packages.gurobi.com/9.5/gurobi9.5.1_linux64.tar.gz &&\
+    tar xfz gurobi9.5.1_linux64.tar.gz &&\
+    rm $GUROBI_BASE_DIR/gurobi9.5.1_linux64.tar.gz &&\
+	chmod -R 755 $GUROBI_BASE_DIR/gurobi951 &&\
     cd /
 
 ENV PATH="${PATH}:$GUROBI_HOME/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:$GUROBI_HOME/lib"
 
-# clone and patch pyomo
-RUN git clone --branch 5.7.3 --depth 1 https://github.com/Pyomo/pyomo
-ADD gitlab-utils/pyomo_scipampl.patch /pyomo/
-RUN cd /pyomo && \
-    git apply pyomo_scipampl.patch &&\
-    cd /
 
 FROM base as python37
 
@@ -59,9 +53,8 @@ FROM base as python37
 RUN cd / &&\
     add-apt-repository -y ppa:deadsnakes/ppa &&\
     apt-get update &&\
-    apt-get install -y python3.7-venv python3-pip &&\
+    apt-get install -y python3.7-venv python3-pip python3.7-dev &&\
     cd /
-
 
 
 RUN cd $GUROBI_HOME &&\
@@ -70,9 +63,8 @@ RUN cd $GUROBI_HOME &&\
 
 # Add requirements to docker image
 ADD requirements.txt /
-
-RUN python3.7 -m pip install /pyomo
 RUN python3.7 -m pip install --no-cache-dir -r /requirements.txt
+
 
 FROM base as python38
 
@@ -80,10 +72,8 @@ FROM base as python38
 RUN cd / &&\
     add-apt-repository -y ppa:deadsnakes/ppa &&\
     apt-get update &&\
-    apt-get install -y python3.8-venv python3-pip &&\
+    apt-get install -y python3.8-venv python3-pip python3.8-dev &&\
     cd /
-
-
 
 RUN cd $GUROBI_HOME &&\
     python3.8 setup.py install &&\
@@ -91,9 +81,8 @@ RUN cd $GUROBI_HOME &&\
 
 # Add requirements to docker image
 ADD requirements.txt /
-
-RUN python3.8 -m pip install /pyomo
 RUN python3.8 -m pip install --no-cache-dir -r /requirements.txt
+
 
 FROM base as python39
 
@@ -101,9 +90,8 @@ FROM base as python39
 RUN cd / &&\
     add-apt-repository -y ppa:deadsnakes &&\
     apt-get update &&\
-    apt-get install -y python3.9-venv python3-pip &&\
+    apt-get install -y python3.9-venv python3-pip python3.9-dev &&\
     cd /
-
 
 
 RUN cd $GUROBI_HOME &&\
@@ -112,6 +100,4 @@ RUN cd $GUROBI_HOME &&\
 
 # Add requirements to docker image
 ADD requirements.txt /
-
-RUN python3.9 -m pip install /pyomo
 RUN python3.9 -m pip install --no-cache-dir -r /requirements.txt

@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -82,7 +82,7 @@ class HeatPump(ThermalEntityHeating, ElectricalEntity, hp.Heatpump):
     """
 
     def __init__(self, environment, p_th_nom, cop=None, eta=0.36, t_max=55.0,
-                 lower_activation_limit=0, t_flow=55.0):
+                 lower_activation_limit=0.4, t_flow=55.0):
         simu_horizon = environment.timer.simu_horizon
 
         (t_ambient,) = environment.weather.getWeatherForecast(getTAmbient=True)

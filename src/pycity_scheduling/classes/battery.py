@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -48,8 +48,8 @@ class Battery(ElectricalEntity, bat.Battery):
     soc_init : float, optional
         Initial state of charge. Defaults to 50%.
     eta : float, optional
-        Charging and discharging efficiency. Must be in (0,1]. Defaults
-        to one.
+        Charging and discharging efficiency. Must be in (0,1].
+        Defaults to one.
     storage_end_equality : bool, optional
         `True` if the soc at the end of the scheduling has to be equal to
         the initial soc.
@@ -87,7 +87,7 @@ class Battery(ElectricalEntity, bat.Battery):
         p_{el\\_supply} &\\leq& (1-p_{state}) * p_{el\\_max\\_charge}
     """
 
-    def __init__(self, environment, e_el_max, p_el_max_charge, p_el_max_discharge=None, soc_init=0.5, eta=1,
+    def __init__(self, environment, e_el_max, p_el_max_charge, p_el_max_discharge=None, soc_init=0.5, eta=0.95,
                  storage_end_equality=False):
 
         capacity = e_el_max * 3600 * 1000
@@ -141,7 +141,8 @@ class Battery(ElectricalEntity, bat.Battery):
             m.p_el_supply_vars = pyomo.Var(m.t, domain=pyomo.Reals,
                                            bounds=(0.0, np.inf if mode == "integer" else self.p_el_max_discharge),
                                            initialize=0)
-            m.e_el_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, self.e_el_max), initialize=0)
+            m.e_el_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, self.e_el_max),
+                                    initialize=self.e_el_max*self.soc_init)
 
             def p_rule(model, t):
                 return model.p_el_vars[t] == model.p_el_demand_vars[t] - model.p_el_supply_vars[t]
@@ -154,16 +155,16 @@ class Battery(ElectricalEntity, bat.Battery):
                          - (1.0 / self.eta_discharge) * model.p_el_supply_vars[t])
                         * self.time_slot
                 )
-                e_el_last = model.e_el_vars[t - 1] if t >= 1 else model.e_el_init
+                e_el_last = model.e_el_vars[t-1] if t >= 1 else model.e_el_init
                 return model.e_el_vars[t] == e_el_last + delta
             m.e_constr = pyomo.Constraint(m.t, rule=e_rule)
 
-            def e_end_rule(model):
-                if self.storage_end_equality:
-                    return model.e_el_vars[self.op_horizon-1] == self.e_el_max * self.soc_init
-                else:
-                    return model.e_el_vars[self.op_horizon-1] >= self.e_el_max * self.soc_init
-            m.e_end_constr = pyomo.Constraint(rule=e_end_rule)
+            # Set bounds for the final storage capacity
+            if self.storage_end_equality:
+                m.e_el_vars[self.op_horizon-1].setlb(self.e_el_max * self.soc_init)
+                m.e_el_vars[self.op_horizon-1].setub(self.e_el_max * self.soc_init)
+            else:
+                m.e_el_vars[self.op_horizon-1].setlb(self.e_el_max * self.soc_init)
 
             if mode == "integer":
                 m.p_state_vars = pyomo.Var(m.t, domain=pyomo.Binary)
@@ -189,5 +190,5 @@ class Battery(ElectricalEntity, bat.Battery):
         if timestep == 0:
             m.e_el_init = self.soc_init * self.e_el_max
         else:
-            m.e_el_init = self.e_el_schedule[timestep - 1]
+            m.e_el_init = self.e_el_schedule[timestep-1]
         return

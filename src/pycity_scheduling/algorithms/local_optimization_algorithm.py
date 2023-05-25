@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -30,9 +30,10 @@ from pycity_scheduling.solvers import DEFAULT_SOLVER, DEFAULT_SOLVER_OPTIONS
 
 
 class LocalOptimization(DistributedAlgorithm):
-    """Implementation of the reference optimization algorithm.
+    """
+    Implementation of the reference Local Optimization algorithm.
 
-        Schedule all nodes in `city_district` on their own.
+    Schedule all nodes (i.e., buildings) in `city_district` on their own.
     """
     def __init__(self, city_district, solver=DEFAULT_SOLVER, solver_options=DEFAULT_SOLVER_OPTIONS, mode="convex",
                  robustness=None):

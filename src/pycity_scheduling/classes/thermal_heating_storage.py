@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -105,14 +105,14 @@ class ThermalHeatingStorage(ThermalEntityHeating, tes.ThermalEnergyStorage):
 
         if mode == "convex" or "integer":
             m.p_th_heat_vars.setlb(None)
+            m.e_th_heat_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, self.e_th_max),
+                                         initialize=self.e_th_max*self.soc_init)
 
-            m.e_th_heat_vars = pyomo.Var(m.t, domain=pyomo.Reals, bounds=(0, self.e_th_max), initialize=0)
-
-            m.e_th_ini = pyomo.Param(default=self.soc_init * self.e_th_max, mutable=True)
+            m.e_th_init = pyomo.Param(default=self.soc_init * self.e_th_max, mutable=True)
 
             def e_rule(model, t):
-                e_th_last = model.e_th_heat_vars[t - 1] if t >= 1 else model.e_th_ini
-                return model.e_th_heat_vars[t] == e_th_last * (1 - self.th_loss_coeff) + \
+                e_th_last = model.e_th_heat_vars[t-1] if t >= 1 else model.e_th_init
+                return model.e_th_heat_vars[t] == e_th_last * (1.0 - self.th_loss_coeff) + \
                        m.p_th_heat_vars[t] * self.time_slot
             m.e_constr = pyomo.Constraint(m.t, rule=e_rule)
 

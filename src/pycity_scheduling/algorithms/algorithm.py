@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -30,7 +30,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverStatus, TerminationCondition
 
 from pycity_scheduling.classes import CityDistrict, Building
-from pycity_scheduling.exceptions import NonoptimalError, MaxIterationError
+from pycity_scheduling.exceptions import NonoptimalError
 from pycity_scheduling.solvers import DEFAULT_SOLVER, DEFAULT_SOLVER_OPTIONS
 
 
@@ -247,10 +247,9 @@ class IterationAlgorithm(OptimizationAlgorithm):
         """
         if results["iterations"][-1] >= self.max_iterations:
             if debug:
-                print(
-                    "Exceeded iteration limit of {0} iterations.".format(self.max_iterations)
-                )
-            warnings.warn("User defined iteration limit exceeded")
+                warnings.warn("User defined iteration limit exceeded")
+            print("Exceeded the user defined iteration limit of {0} iterations. "
+                  "Terminating the iterative algorithm.".format(self.max_iterations))
             return True
         return False
 
@@ -339,12 +338,13 @@ class SolverNode:
         protected from deviations. Second entry defines the magnitude of
         deviations which are considered.
     """
-    def __init__(self, solver, solver_options, entities, mode="convex", robustness=None):
+    def __init__(self, solver, solver_options, entities, mode="convex", robustness=None, write_ilp_file=False):
         self.solver = pyomo.SolverFactory(solver, node_ids=[entity.id for entity in entities],
                                           **solver_options.get("__call__", {}))
         self.solver_options = solver_options
         self.is_persistent = isinstance(self.solver, PersistentSolver)
         self.robustness = robustness
+        self.write_ilp_file = write_ilp_file
         self.entities = entities
         self.mode = mode
         self.model = None
@@ -385,6 +385,14 @@ class SolverNode:
             self.solver.set_instance(self.model, **self.solver_options.get("set_instance", {}))
         return
 
+    def constr_update(self):
+        """Only propagate the constraints update of the model."""
+        if self.is_persistent:
+            self.solver.set_instance(self.model, **self.solver_options.get("set_instance", {}))
+        else:
+            pass
+        return
+
     def obj_update(self):
         """Only propagate the objective value update of the model."""
         if self.is_persistent:
@@ -420,7 +428,7 @@ class SolverNode:
             result = self.solver.solve(self.model, **solve_options)
         if result.solver.termination_condition != TerminationCondition.optimal or \
                 result.solver.status != SolverStatus.ok:
-            if debug:
+            if debug and self.write_ilp_file:
                 import pycity_scheduling.util.debug as debug
                 debug.analyze_model(self.model, self.solver, result)
             raise NonoptimalError("Could not retrieve schedule from model.")

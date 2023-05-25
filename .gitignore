@@ -21,15 +21,14 @@ dist
 output/
 
 # Saved output files in examples
-examples/*.csv
-examples/*.json
+*.csv
+*.json
 
 # Optimization model files
 *.lp
 *.ilp
 
 # Other files
-*.pdf
 *.emf
 *.asv
 *.bak

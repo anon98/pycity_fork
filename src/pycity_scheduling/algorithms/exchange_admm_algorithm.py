@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -32,9 +32,9 @@ from pycity_scheduling.solvers import DEFAULT_SOLVER, DEFAULT_SOLVER_OPTIONS
 
 
 class ExchangeADMM(IterationAlgorithm, DistributedAlgorithm):
-    """Implementation of the Exchange ADMM Algorithm.
-
-    Uses the Exchange ADMM algorithm described in [1].
+    """
+    Implementation of the distributed ADMM algorithm.
+    This class implements the Exchange ADMM as described in [1].
 
     Parameters
     ----------
@@ -62,7 +62,7 @@ class ExchangeADMM(IterationAlgorithm, DistributedAlgorithm):
     eps_dual : float, optional
         Dual stopping criterion for the ADMM algorithm.
     rho : float, optional
-        Stepsize for the ADMM algorithm.
+        Step size for the ADMM algorithm.
     max_iterations : int, optional
         Maximum number of ADMM iterations.
     robustness : tuple, optional
@@ -72,10 +72,10 @@ class ExchangeADMM(IterationAlgorithm, DistributedAlgorithm):
 
     References
     ----------
-    .. [1] "Alternating Direction Method of Multipliers for Decentralized
-       Electric Vehicle Charging Control" by Jose Rivera, Philipp Wolfrum,
-       Sandra Hirche, Christoph Goebel, and Hans-Arno Jacobsen
-       Online: https://mediatum.ub.tum.de/doc/1187583/1187583.pdf (accessed on 2020/09/28)
+    [1] "Alternating Direction Method of Multipliers for Decentralized
+    Electric Vehicle Charging Control" by Jose Rivera, Philipp Wolfrum,
+    Sandra Hirche, Christoph Goebel, and Hans-Arno Jacobsen
+    Online: https://mediatum.ub.tum.de/doc/1187583/1187583.pdf (accessed on 2020/09/28)
     """
     def __init__(self, city_district, solver=DEFAULT_SOLVER, solver_options=DEFAULT_SOLVER_OPTIONS, mode="convex",
                  eps_primal=0.1, eps_dual=1.0, rho=2.0, max_iterations=10000, robustness=None):
@@ -84,13 +84,18 @@ class ExchangeADMM(IterationAlgorithm, DistributedAlgorithm):
         self.eps_dual = eps_dual
         self.rho = rho
         self.max_iterations = max_iterations
-        # create solver nodes for each entity
-        self.nodes = [
-            SolverNode(solver, solver_options, [entity], mode, robustness=robustness)
-            for entity in self.entities
-        ]
-        # create pyomo parameters for each entity
-        for node, entity in zip(self.nodes, self.entities):
+        self.op_horizon = self.city_district.op_horizon
+
+        # Only consider entities of type CityDistrict, Building, Photovoltaic, WindEnergyConverter
+        self._entities = [entity for entity in self.entities if
+                          isinstance(entity, (CityDistrict, Building, Photovoltaic, WindEnergyConverter))]
+
+        # Create a solver node for each entity
+        self.nodes = [SolverNode(solver, solver_options, [entity], mode, robustness=robustness)
+                      for entity in self._entities]
+
+        # Create pyomo parameters for each entity
+        for node, entity in zip(self.nodes, self._entities):
             node.model.beta = pyomo.Param(mutable=True, initialize=1)
             node.model.xs_ = pyomo.Param(entity.model.t, mutable=True, initialize=0)
             node.model.us = pyomo.Param(entity.model.t, mutable=True, initialize=0)
@@ -98,29 +103,28 @@ class ExchangeADMM(IterationAlgorithm, DistributedAlgorithm):
         self._add_objective()
 
     def _add_objective(self):
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             obj = node.model.beta * entity.get_objective()
-            for t in range(entity.op_horizon):
+            for t in range(self.op_horizon):
                 obj += self.rho / 2 * entity.model.p_el_vars[t] * entity.model.p_el_vars[t]
             # penalty term is expanded and constant is omitted
             if i == 0:
                 # invert sign of p_el_schedule and p_el_vars (omitted for quadratic term)
                 penalty = [(-node.model.last_p_el_schedules[t] - node.model.xs_[t] - node.model.us[t])
-                           for t in range(entity.op_horizon)]
-                for t in range(entity.op_horizon):
+                           for t in range(self.op_horizon)]
+                for t in range(self.op_horizon):
                     obj += self.rho * penalty[t] * entity.model.p_el_vars[t]
             else:
                 penalty = [(-node.model.last_p_el_schedules[t] + node.model.xs_[t] + node.model.us[t])
-                           for t in range(entity.op_horizon)]
-                for t in range(entity.op_horizon):
+                           for t in range(self.op_horizon)]
+                for t in range(self.op_horizon):
                     obj += self.rho * penalty[t] * entity.model.p_el_vars[t]
             node.model.o = pyomo.Objective(expr=obj)
         return
 
     def _presolve(self, full_update, beta, robustness, debug):
         results, params = super()._presolve(full_update, beta, robustness, debug)
-
-        for node, entity in zip(self.nodes, self.entities):
+        for node, entity in zip(self.nodes, self._entities):
             node.model.beta = self._get_beta(params, entity)
             if full_update:
                 node.full_update(robustness)
@@ -135,59 +139,55 @@ class ExchangeADMM(IterationAlgorithm, DistributedAlgorithm):
 
     def _iteration(self, results, params, debug):
         super(ExchangeADMM, self)._iteration(results, params, debug)
-        op_horizon = self.entities[0].op_horizon
 
         # fill parameters if not already present
         if "p_el" not in params:
-            params["p_el"] = np.zeros((len(self.entities), op_horizon))
+            params["p_el"] = np.zeros((len(self._entities), self.op_horizon))
         if "x_" not in params:
-            params["x_"] = np.zeros(op_horizon)
+            params["x_"] = np.zeros(self.op_horizon)
         if "u" not in params:
-            params["u"] = np.zeros(op_horizon)
-        u = params["u"]
+            params["u"] = np.zeros(self.op_horizon)
+        last_u = params["u"]
+        last_p_el = params["p_el"]
+        last_x_ = params["x_"]
 
-        # -----------------
-        # 1) optimize all entities
-        # -----------------
+        # ------------------------------------------
+        # 1) Optimize all entities
+        # ------------------------------------------
         to_solve_nodes = []
         variables = []
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
-            if not isinstance(
-                    entity,
-                    (CityDistrict, Building, Photovoltaic, WindEnergyConverter)
-            ):
-                continue
-
-            for t in range(op_horizon):
-                node.model.last_p_el_schedules[t] = params["p_el"][i][t]
-                node.model.xs_[t] = params["x_"][t]
-                node.model.us[t] = params["u"][t]
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            for t in range(self.op_horizon):
+                node.model.last_p_el_schedules[t] = last_p_el[i][t]
+                node.model.xs_[t] = last_x_[t]
+                node.model.us[t] = last_u[t]
             node.obj_update()
             to_solve_nodes.append(node)
-            variables.append([entity.model.p_el_vars[t] for t in range(op_horizon)])
+            variables.append([entity.model.p_el_vars[t] for t in range(self.op_horizon)])
         self._solve_nodes(results, params, to_solve_nodes, variables=variables, debug=debug)
 
-        # --------------------------
-        # 2) incentive signal update
-        # --------------------------
-        p_el_schedules = np.array([extract_pyomo_values(entity.model.p_el_vars, float) for entity in self.entities])
-        x_ = (-p_el_schedules[0] + sum(p_el_schedules[1:])) / len(self.entities)
-
-        u += x_
+        # ------------------------------------------
+        # 2) Calculate incentive signal update
+        # ------------------------------------------
+        p_el_schedules = np.array([extract_pyomo_values(entity.model.p_el_vars, float) for entity in self._entities])
+        x_ = (-p_el_schedules[0] + sum(p_el_schedules[1:])) / len(self._entities)
 
         # ------------------------------------------
         # 3) Calculate parameters for stopping criteria
         # ------------------------------------------
-        results["r_norms"].append(np.math.sqrt(len(self.entities)) * np.linalg.norm(x_))
+        results["r_norms"].append(np.math.sqrt(len(self._entities)) * np.linalg.norm(x_))
 
         s = np.zeros_like(p_el_schedules)
-        s[0] = - self.rho * (-p_el_schedules[0] + params["p_el"][0] + params["x_"] - x_)
-        for i in range(1, len(self.entities)):
-            s[i] = - self.rho * (p_el_schedules[i] - params["p_el"][i] + params["x_"] - x_)
+        s[0] = - self.rho * (-p_el_schedules[0] + last_p_el[0] + last_x_ - x_)
+        for i in range(1, len(self._entities)):
+            s[i] = - self.rho * (p_el_schedules[i] - last_p_el[i] + last_x_ - x_)
         results["s_norms"].append(np.linalg.norm(s.flatten()))
 
-        # save parameters for another iteration
+        # ------------------------------------------
+        # 4) Save required parameters for another iteration
+        # ------------------------------------------
         params["p_el"] = p_el_schedules
         params["x_"] = x_
-        params["u"] = u
+        params["u"] += x_
+
         return

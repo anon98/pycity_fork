@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -64,7 +64,7 @@ class Boiler(ThermalEntityHeating, bl.Boiler):
           Generates additional constraints for the `lower_activation_limit` in `integer` mode.
     """
 
-    def __init__(self, environment, p_th_nom, eta=1, lower_activation_limit=0):
+    def __init__(self, environment, p_th_nom, eta=1, lower_activation_limit=0.0):
         # Flow temperature of 55 C
         super().__init__(environment, 1000*p_th_nom, eta, 55, lower_activation_limit)
         self._long_id = "BL_" + self._id_string

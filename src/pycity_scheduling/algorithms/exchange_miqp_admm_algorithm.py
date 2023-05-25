@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -22,6 +22,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 """
 
 
+import warnings
 import numpy as np
 import pyomo.core as pyo_core
 import pyomo.kernel as pmo
@@ -34,9 +35,9 @@ from pycity_scheduling.solvers import DEFAULT_SOLVER, DEFAULT_SOLVER_OPTIONS
 
 
 class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
-    """Implementation of the Exchange ADMM Algorithm.
-
-    Uses the Exchange MIQP ADMM algorithm.
+    """
+    Implementation of the distributed ADMM algorithm.
+    This class implements the distributed Exchange MIQP ADMM as described in [1].
 
     Parameters
     ----------
@@ -67,48 +68,56 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
         Primal stopping criterion for the exchange problem solved by the Exchange MIQP ADMM algorithm.
     eps_dual : float, optional
         Dual stopping criterion for the exchange problem solved by the Exchange MIQP ADMM algorithm.
-    eps_primal_i : float, optional
-        Primal stopping criterion for the constrained sub-problems solved by the Exchange MIQP ADMM algorithm.
-    eps_dual_i : float, optional
-        Dual stopping criterion for the constrained sub-problems solved by the Exchange MIQP ADMM algorithm.
     rho : float, optional
-        Stepsize for the ADMM algorithm.
+        Step size for the ADMM algorithm.
     max_iterations : int, optional
         Maximum number of ADMM iterations.
     robustness : tuple, optional
         Tuple of two floats. First entry defines how many time steps are
         protected from deviations. Second entry defines the magnitude of
         deviations which are considered.
+
+    References
+    ----------
+    [1] "A simple effective heuristic for embedded mixed-integer quadratic programming"
+    by Reza Takapoui, Nicholas Moehle, Stephen Boyd, and Alberto Bemporad
+    Online: https://web.stanford.edu/~boyd/papers/pdf/miqp_admm.pdf (accessed on 2022/07/29)
     """
     def __init__(self, city_district, solver=DEFAULT_SOLVER, solver_options=DEFAULT_SOLVER_OPTIONS, mode="integer",
-                 x_update_mode='unconstrained', eps_primal=0.1, eps_dual=0.1, eps_primal_i=0.1, eps_dual_i=0.1,
-                 rho=2, max_iterations=10000, robustness=None):
+                 x_update_mode='constrained', eps_primal=0.1, eps_dual=0.1, rho=2.0, max_iterations=10000,
+                 robustness=None):
         super(ExchangeMIQPADMM, self).__init__(city_district, solver, solver_options, mode)
-        self.city_district = city_district
+
         self.mode = mode
         self.x_update_mode = x_update_mode
         self.eps_primal = eps_primal
         self.eps_dual = eps_dual
-        self.eps_primal_i = eps_primal_i
-        self.eps_dual_i = eps_dual_i
+        self.rho = rho
         self.max_iterations = max_iterations
+        self.op_horizon = self.city_district.op_horizon
         self.counter = 0
-        # create solver nodes for each entity
-        self.nodes = [
-            SolverNode(solver, solver_options, [entity], mode, robustness=robustness)
-            for entity in self.entities
-        ]
-        # load data from the model
+        self.feasible = False
+
+        # Only consider entities of type CityDistrict, Building, Photovoltaic, WindEnergyConverter
+        self._entities = [entity for entity in self.entities if
+                          isinstance(entity, (CityDistrict, Building, Photovoltaic, WindEnergyConverter))]
+        self.asset_updates = np.empty(len(self._entities), dtype=np.object)
+
+        # Create a solver node for each entity
+        self.nodes = [SolverNode(solver, solver_options, [entity], mode, robustness=robustness)
+                      for entity in self._entities]
+
+        # Load data from the model
         self.constraint_list = self._get_constraints()
         self.variable_list = self._get_variables()
-        self.op_horizon = self.entities[0].op_horizon
-        # create pyomo parameters for each entity
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
+
+        # Create pyomo parameters for each entity
+        for i, node, entity in zip(range(len(self.entities)), self.nodes, self._entities):
             node.model.beta = pyomo.Param(mutable=True, initialize=1)
             node.model.x_exch_ = pyomo.Param(entity.model.t, mutable=True, initialize=0)
             node.model.u_exch = pyomo.Param(entity.model.t, mutable=True, initialize=0)
             node.model.last_p_el_schedules = pyomo.Param(entity.model.t, mutable=True, initialize=0)
-            node.model.rho = pyomo.Param(mutable=True, initialize=rho, within=pyomo.Reals)
+
         # Lists that contain the dual parameters of all subsystems
         self.x_k, self.u_var, self.u_constr, self.v_k = self._set_parameters()
         self._add_objective()
@@ -118,8 +127,8 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
     # The data structure in which the variables are stored is shown graphically in "data_structure.pdf"
     def _get_variables(self):
         variable_list = np.empty(shape=0)
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
-            binaries_list = Variables(self.entities[0].op_horizon)
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            binaries_list = Variables(self.op_horizon)
             if i != 0:
                 for en in entity.get_all_entities():
                     for variable in en.model.component_objects(pyomo.Var):
@@ -136,10 +145,10 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
     def _get_constraints(self):
         # List that contains the dictionaries that store the specified constr_lists of each node
         constraint_list = np.empty(shape=0)
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             node_dict = {}
-            equality_constr_list = Constraints(self.entities[0].op_horizon)
-            inequality_constr_list = Constraints(self.entities[0].op_horizon)
+            equality_constr_list = Constraints(self.op_horizon)
+            inequality_constr_list = Constraints(self.op_horizon)
             if i != 0:
                 for en in entity.get_all_entities():
                     for constraint in en.model.component_objects(pyomo.Constraint):
@@ -185,13 +194,13 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
         u_constr_param = np.empty(shape=0)
         # dual parameter for the ADMM method for inequality constrained optimization
         v_k_param = np.empty(shape=0)
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             node_dict = {}
-            x_k_binaries_list = Variables(self.entities[0].op_horizon)
-            u_binaries_list = Variables(self.entities[0].op_horizon)
-            u_eq_list = Constraints(self.entities[0].op_horizon)
-            u_ineq_list = Constraints(self.entities[0].op_horizon)
-            v_k_list = Constraints(self.entities[0].op_horizon)
+            x_k_binaries_list = Variables(self.op_horizon)
+            u_binaries_list = Variables(self.op_horizon)
+            u_eq_list = Constraints(self.op_horizon)
+            u_ineq_list = Constraints(self.op_horizon)
+            v_k_list = Constraints(self.op_horizon)
             if i != 0:
                 length = self.variable_list[i].get_length()
                 if length != 0:
@@ -240,53 +249,53 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
         return x_k_param, u_var_param, u_constr_param, v_k_param
 
     def _add_objective(self):
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             obj = node.model.beta * entity.get_objective()
-            for j in range(entity.op_horizon):
-                obj += node.model.rho / 2 * entity.model.p_el_vars[j] * entity.model.p_el_vars[j]
+            for j in range(self.op_horizon):
+                obj += self.rho / 2 * entity.model.p_el_vars[j] * entity.model.p_el_vars[j]
             # penalty term is expanded and constant is omitted
             if i == 0:
                 # invert sign of p_el_schedule and p_el_vars (omitted for quadratic term)
                 penalty = [(-node.model.last_p_el_schedules[t] - node.model.x_exch_[t] - node.model.u_exch[t])
-                           for t in range(entity.op_horizon)]
-                for j in range(entity.op_horizon):
-                    obj += node.model.rho * penalty[j] * entity.model.p_el_vars[j]
+                           for t in range(self.op_horizon)]
+                for j in range(self.op_horizon):
+                    obj += self.rho * penalty[j] * entity.model.p_el_vars[j]
             else:
                 penalty = [(-node.model.last_p_el_schedules[t] + node.model.x_exch_[t] + node.model.u_exch[t])
-                           for t in range(entity.op_horizon)]
-                for j in range(entity.op_horizon):
-                    obj += node.model.rho * penalty[j] * entity.model.p_el_vars[j]
+                           for t in range(self.op_horizon)]
+                for j in range(self.op_horizon):
+                    obj += self.rho * penalty[j] * entity.model.p_el_vars[j]
                 # Empirically the following term worsens the convergence of the algorithm in the unconstrained mode
                 # although it belongs to the mathematical formulation of the algorithm. Therefore, it is only used in
-                # constrained mode
-                # Todo: Double check what happens to unconstrained variant
+                # constrained mode.
+                # Todo: Double-check what happens to the unconstrained version - not properly working yet.
                 if self.x_update_mode == 'constrained':
-                    for t in range(entity.op_horizon):
+                    for t in range(self.op_horizon):
                         a = self.variable_list[i].get_list(t)
                         b = self.x_k[i].get_list(t)
                         c = self.u_var[i].get_list(t)
                         expr = sum((x - x_k + u_k) ** 2 for x, x_k, u_k in zip(a, b, c))
-                        obj += node.model.rho / 2 * expr
+                        obj += self.rho / 2 * expr
 
                 if self.x_update_mode == 'unconstrained':
                     # constraint entries of the augmented term
-                    for t in range(entity.op_horizon + 1):
+                    for t in range(self.op_horizon + 1):
                         a = self.constraint_list[i]["equality_constr"].get_list(t)
                         b = self.u_constr[i]["equality_constr"].get_list(t)
                         expr = sum((c + p) ** 2 for c, p in zip(a, b))
-                        obj += node.model.rho / 2 * expr
+                        obj += self.rho / 2 * expr
                         a = self.constraint_list[i]["inequality_constr"].get_list(t)
                         b = self.u_constr[i]["inequality_constr"].get_list(t)
                         c = self.v_k[i].get_list(t)
                         expr = sum((constraint + u_k - v_k) ** 2 for constraint, u_k, v_k in zip(a, b, c))
-                        obj += node.model.rho / 2 * expr
+                        obj += self.rho / 2 * expr
             node.model.o = pyomo.Objective(expr=obj)
         return
 
     # returns the average of the primal residual of subsystem i
     def primal_residual(self):
         primal_list = []
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             r_i_t = np.empty(shape=0)
             for t in range(self.op_horizon + 1):
                 r_i_t = np.append(r_i_t, self.constraint_list[i]["equality_constr"].get_list_values(t))
@@ -302,13 +311,13 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
             entry = self.variable_list[i].get_list_values(t) - self.x_k[i].get_list_values(t)
             s_i_t = np.append(s_i_t, entry)
             dual += np.linalg.norm(s_i_t)
-        dual = node.model.rho.value * dual / self.op_horizon
+        dual = self.rho * dual / self.op_horizon
         return dual
 
     # Implementation of the projection function Pi
     def _pi(self):
-        for i, node, entity in zip(range(len(self.entities)), self.nodes, self.entities):
-            for t in range(entity.op_horizon):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            for t in range(self.op_horizon):
                 x_old = self.variable_list[i].get_list_values(t)
                 x_new = x_old + self.u_var[i].get_list_values(t)
                 # round the binary variables on 0 or 1
@@ -322,30 +331,39 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
         return
 
     def _presolve(self, full_update, beta, robustness, debug):
-        # residuals for the exchange problem
+        # initialize results, params and apply robustness if applicable
         results, params = super()._presolve(full_update, beta, robustness, debug)
         results["r_norms"] = []
         results["s_norms"] = []
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
+        results["obj_value"] = np.empty(shape=0)
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             node.model.beta = self._get_beta(params, entity)
             if full_update:
                 node.full_update(robustness)
-            # residuals for all subsystems
-            name = "r_i_norms_" + str(i)
-            results[name] = []
-            name = "s_i_norms_" + str(i)
-            results[name] = []
-            # average residuals
-            results["r_sub_ave"] = []
-            results["s_sub_ave"] = []
-            # objective values
-            results["obj_value"] = np.empty(shape=0)
+            results["r_i_norms_" + str(i)] = []
+            results["s_i_norms_" + str(i)] = []
         return results, params
+
+    def _postsolve(self, results, params, debug):
+        if self.feasible is False:
+            warnings.warn("Exchange MIQP ADMM: Attention - The final solution may not be feasible!")
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            for asset in entity.get_all_entities():
+                pyomo_var_values_map = pyomo.ComponentMap()
+                for v in asset.model.component_data_objects(ctype=pyomo.Var, descend_into=True):
+                    if str(v) in self.asset_updates[i]:
+                        pyomo_var_values_map[v] = pyomo.value(self.asset_updates[i][str(v)])
+                for var in pyomo_var_values_map:
+                    var.set_value(pyomo_var_values_map[var])
+                asset.update_schedule()
+        results["obj_value"][-1] = self._get_objective()
+        super()._postsolve(results, params, debug)
+        return
 
     # returns the objective value
     def _get_objective(self):
         obj_value = 0
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             obj_value += pyomo.value(entity.get_objective())
         return obj_value
 
@@ -353,54 +371,39 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
     def _is_last_iteration(self, results, params, debug):
         if super(ExchangeMIQPADMM, self)._is_last_iteration(results, params, debug):
             return True
-        primal = 0
-        dual = 0
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
-            name = "r_i_norms_" + str(i)
-            primal += results[name][-1]
-            name = "s_i_norms_" + str(i)
-            dual += results[name][-1]
-        # average of all dual updates
-        primal = primal / (len(self.nodes) - 1)
-        dual = dual / (len(self.nodes) - 1)
-        results["r_sub_ave"].append(primal)
-        results["s_sub_ave"].append(dual)
 
-        # Reaching the stopping criteria
-        if results["r_norms"][-1] <= self.eps_primal and results["s_norms"][-1] <= self.eps_dual\
-                and primal <= self.eps_primal_i and dual <= self.eps_dual_i:
+        # Checking the stopping criteria
+        if (results["r_norms"][-1] <= self.eps_primal) and (results["s_norms"][-1] <= self.eps_dual) and \
+                (self.feasible is True):
             return True
-
-        return
+        return False
 
     def _iteration(self, results, params, debug):
         super(ExchangeMIQPADMM, self)._iteration(results, params, debug)
-        op_horizon = self.entities[0].op_horizon
         self.counter += 1
 
         # fill parameters if not already present
         if "p_el" not in params:
-            params["p_el"] = np.zeros((len(self.entities), op_horizon))
+            params["p_el"] = np.zeros((len(self._entities), self.op_horizon))
         if "x_" not in params:
-            params["x_"] = np.zeros(op_horizon)
+            params["x_"] = np.zeros(self.op_horizon)
         if "u" not in params:
-            params["u"] = np.zeros(op_horizon)
+            params["u"] = np.zeros(self.op_horizon)
         u = params["u"]
 
         # -----------------
         # 1) optimize all entities
         # -----------------
         to_solve_nodes = []
-        variables = []
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             # for each subsystem, dual variables for the constraints have to be created
             dual = "u_bin_" + str(i)
             if dual not in params:
-                params[dual] = np.zeros((op_horizon, self.variable_list[i].get_length()))
+                params[dual] = np.zeros((self.op_horizon, self.variable_list[i].get_length()))
             # for each subsystem the solution of the descision variables have to be stored for the next iteration
             x_descision = "x_bin_" + str(i)
             if x_descision not in params:
-                params[x_descision] = np.zeros((op_horizon, self.variable_list[i].get_length()))
+                params[x_descision] = np.zeros((self.op_horizon, self.variable_list[i].get_length()))
 
             # Dual variables for the constraints
             if self.x_update_mode == 'unconstrained':
@@ -414,22 +417,16 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
                 if dual not in params:
                     params[dual] = self.u_constr[i]["inequality_constr"].get_initial_list()
 
-            if not isinstance(
-                    entity,
-                    (CityDistrict, Building, Photovoltaic, WindEnergyConverter)
-            ):
-                continue
             # set all parameters
-            for t in range(op_horizon):
+            for t in range(self.op_horizon):
                 node.model.last_p_el_schedules[t] = params["p_el"][i][t]
                 node.model.x_exch_[t] = params["x_"][t]
                 node.model.u_exch[t] = params["u"][t]
                 self.u_var[i].set_list_values(params["u_bin_" + str(i)][t, :], t)
                 self.x_k[i].set_list_values(params["x_bin_" + str(i)][t, :], t)
-                variables.append(self.variable_list[i].get_list(t))
 
             if self.x_update_mode == 'unconstrained':
-                for t in range(op_horizon + 1):
+                for t in range(self.op_horizon + 1):
                     self.u_constr[i]["equality_constr"].set_list_values(params["u_eq_constr_" + str(i)][t], t)
                     self.u_constr[i]["inequality_constr"].set_list_values(params["u_ineq_constr_" + str(i)][t], t)
                     self.v_k[i].set_list_values(params["v_k_" + str(i)][t], t)
@@ -437,15 +434,14 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
             # set objective of the node
             node.obj_update()
             to_solve_nodes.append(node)
-            variables.append([entity.model.p_el_vars[t] for t in range(op_horizon)])
-        self._solve_nodes(results, params, to_solve_nodes, variables=variables, debug=debug)
+        self._solve_nodes(results, params, to_solve_nodes)
+
         # --------------------------
         # 2) incentive signal update
         # --------------------------
-
         # update all dual variables of subsystems
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
-            for t in range(op_horizon):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+            for t in range(self.op_horizon):
                 x_bin = self.variable_list[i].get_list_values(t)
                 x_k_bin = self.x_k[i].get_list_values(t)
                 u_k_bin = self.u_var[i].get_list_values(t)
@@ -453,7 +449,7 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
 
             if self.x_update_mode == 'unconstrained':
                 # constraint duals have the none index as an additional time index
-                for t in range(op_horizon + 1):
+                for t in range(self.op_horizon + 1):
                     eq_constr = self.constraint_list[i]["equality_constr"].get_list_values(t)
                     ineq_constr = self.constraint_list[i]["inequality_constr"].get_list_values(t)
                     u_ineq_k = self.u_constr[i]["inequality_constr"].get_list_values(t)
@@ -470,15 +466,15 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
         self._pi()
 
         # Calculate all residual norms of subsystems. Norm the residuals by T
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             primal = np.linalg.norm(primal_list[i])
             primal = primal / self.op_horizon
             results["r_i_norms_" + str(i)].append(primal)
             results["s_i_norms_" + str(i)].append(self.dual_residual(i, node))
 
         # exchange dual update
-        p_el_schedules = np.array([extract_pyomo_values(entity.model.p_el_vars, float) for entity in self.entities])
-        x_ = (-p_el_schedules[0] + sum(p_el_schedules[1:])) / len(self.entities)
+        p_el_schedules = np.array([extract_pyomo_values(entity.model.p_el_vars, float) for entity in self._entities])
+        x_ = (-p_el_schedules[0] + sum(p_el_schedules[1:])) / len(self._entities)
         u += x_
 
         # ------------------------------------------
@@ -487,51 +483,93 @@ class ExchangeMIQPADMM(IterationAlgorithm, DistributedAlgorithm):
         results["r_norms"].append(np.linalg.norm(x_))
 
         s = np.zeros_like(p_el_schedules)
-        for i, node, entity in zip(range(len(self.nodes)), self.nodes, self.entities):
+        for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
             if i == 0:
-                s[i] = - node.model.rho.value * (-p_el_schedules[0] + params["p_el"][0] + params["x_"] - x_)
-            s[i] = - node.model.rho.value * (p_el_schedules[i] - params["p_el"][i] + params["x_"] - x_)
+                s[i] = - self.rho * (-p_el_schedules[0] + params["p_el"][0] + params["x_"] - x_)
+            else:
+                s[i] = - self.rho * (p_el_schedules[i] - params["p_el"][i] + params["x_"] - x_)
         results["s_norms"].append(np.linalg.norm(s.flatten()))
-
-        # store the objective value
-        obj = self._get_objective()
-        results["obj_value"] = np.append(results["obj_value"], obj)
 
         # save parameters for another iteration
         params["p_el"] = p_el_schedules
         params["x_"] = x_
         params["u"] = u
-        for i in range(len(self.nodes)):
+        for i in range(len(self._entities)):
             params["x_bin_" + str(i)] = self.variable_list[i].get_initial_data()
 
         results["schedule"] = p_el_schedules[0]
+        results["obj_value"] = np.append(results["obj_value"], self._get_objective())
+
+        # To check the latest solution for feasibility, fix all binary vars at either 0 or 1 and try to recalculate the
+        # schedule based on a least-squares optimization. Of course, there are also other and possibly more
+        # straightforward ways to check for feasibility. This will be future work.
+        if ((results["r_norms"][-1] <= self.eps_primal) and (results["s_norms"][-1] <= self.eps_dual)) or \
+                (results["iterations"][-1] >= self.max_iterations):
+            print("Stopping criteria satisfied. Checking the current solution for feasibility.")
+            model_objectives = np.empty(len(self._entities), dtype=np.object)
+            entity_objectives = np.empty(len(self._entities), dtype=np.object)
+            for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+                self.variable_list[i].fix_variables()
+                model_objectives[i] = node.model.o
+                entity_objectives[i] = entity.objective
+                entity.least_squares_profile = p_el_schedules[i]
+                entity.objective = "least-squares"
+                node.model.del_component(node.model.o)
+                node.model.add_component("o", pyomo.Objective(expr=entity.get_objective()))
+                node.constr_update()
+                node.obj_update()
+            try:
+                self._solve_nodes(results, params, to_solve_nodes)
+                self.asset_updates = np.empty(len(self._entities), dtype=np.object)
+                for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+                    pyomo_var_values = dict()
+                    for asset in entity.get_all_entities():
+                        for v in asset.model.component_data_objects(ctype=pyomo.Var, descend_into=True):
+                            pyomo_var_values[str(v)] = pyomo.value(v)
+                    self.asset_updates[i] = pyomo_var_values
+                self.feasible = True
+                print("Success. The solution is feasible!")
+                for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+                    entity.objective = entity_objectives[i]
+            except:
+                self.feasible = False
+                print("Failure. The solution is infeasible, because at least one subsystem is (still) infeasible!")
+                for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+                    self.variable_list[i].release_variables()
+                    entity.objective = entity_objectives[i]
+                    node.model.del_component(node.model.o)
+                    node.model.add_component("o", model_objectives[i])
+                    node.constr_update()
+                    node.obj_update()
+                if results["iterations"][-1] >= self.max_iterations:
+                    self._solve_nodes(results, params, to_solve_nodes)
+                    self.asset_updates = np.empty(len(self._entities), dtype=np.object)
+                    for i, node, entity in zip(range(len(self._entities)), self.nodes, self._entities):
+                        pyomo_var_values = dict()
+                        for asset in entity.get_all_entities():
+                            for v in asset.model.component_data_objects(ctype=pyomo.Var, descend_into=True):
+                                pyomo_var_values[str(v)] = pyomo.value(v)
+                        self.asset_updates[i] = pyomo_var_values
         return
 
 
 class Variables:
-    """Implementation of the data structure for the binary decision variables and their dual Variables.
-       For each time step, a numpy array is created in which the time indexed pyomo variables or parameters are stored.
-       The complete data structure is created in the class Exchange MIQP ADMM method _get_variables() and is
-       shown graphically in 'data_structure_exchange_miqp_admm.pdf'.
+    """
+    Implementation of the data structure for the binary decision variables and their dual Variables.
+    For each time step, a numpy array is created in which the time indexed pyomo variables or parameters are stored.
+    The complete data structure is created in the class Exchange MIQP ADMM method _get_variables() and is
+    shown graphically in 'data_structure_exchange_miqp_admm.pdf'.
 
     Parameters
     ----------
     op_horizon : int
         Number of simulation time steps
-    obj : Pyomo Var or Pyomo Param
-        Pyomo object is to append on a time indexed numpy array
-    length: int
-        Length of a numpy array containing pyomo Variables or Parameters
-    time_steo: int
-        Needed to call a Variables array of a specific time step
-    new_values: numpy array
-        Array of values that should replace the actual values of a Variables array of a specific time step
     """
     # In the constructor, an empty numpy array is created for the class Variable object for each time step
     def __init__(self, op_horizon):
         self.x = {}
         self.op_horizon = op_horizon
-        for i in range(op_horizon):
+        for i in range(self.op_horizon):
             name = "t_" + str(i)
             self.x[name] = np.empty(shape=0)
 
@@ -593,34 +631,48 @@ class Variables:
             self.x["t_" + str(time_step)] = np.delete(self.get_list(time_step), 0)
         return
 
+    def fix_variables(self):
+        for time_step in range(self.op_horizon):
+            for x in self.x["t_" + str(time_step)]:
+                x.setlb(x.value)
+                x.setub(x.value)
+        return
+
+    def release_variables(self):
+        for time_step in range(self.op_horizon):
+            for x in self.x["t_" + str(time_step)]:
+                x.setlb(0.0)
+                x.setub(1.0)
+        return
+
+    def print_variables(self):
+        for time_step in range(self.op_horizon):
+            for x in self.x["t_" + str(time_step)]:
+                print(x)
+                print(x.value)
+        return
+
 
 # class creates a data structure for the pyomo constraints and parameters that belong to constraints
 # Compared to variables, the constraints have an additional time index "NONE"
 class Constraints:
-    """Implementation of the data structure for the constraints and their dual Variables.
-       For each time step a numpy array is created in which the time indexed pyomo expressions or Parameters are stored.
-       The complete data structure is created in the class Exchange MIQP ADMM method _get_constraints() and is
-       shown graphically in 'data_structure_exchange_miqp_admm.pdf'.
+    """
+    Implementation of the data structure for the constraints and their dual Variables.
+    For each time step a numpy array is created in which the time indexed pyomo expressions or Parameters are stored.
+    The complete data structure is created in the class Exchange MIQP ADMM method _get_constraints() and is
+    shown graphically in 'data_structure_exchange_miqp_admm.pdf'.
 
     Parameters
     ----------
     op_horizon : int
         Number of simulation time steps
-    obj : Pyomo Expression or Pyomo Parameter
-        Pyomo object is to append on a time indexed numpy array
-    length: int
-        Length of a numpy array containing pyomo Expressions or Parameters
-    index: int or None
-        Needed to call a Constraints array of a specific time step
-    new_values: numpy array
-        Array of values that should replace the actual values of a Constraints array of a specific time step
     """
     # Constructor: An empty numpy array is created for the Constraint object for each time step and the None index
     # From now on: time index means the time steps plus the None index (t_1, t_2, ... , t_n, None)
     def __init__(self, op_horizon):
         self.x = {}
         self.op_horizon = op_horizon
-        for i in range(op_horizon + 1):
+        for i in range(self.op_horizon + 1):
             name = "index_" + str(i)
             self.x[name] = np.empty(shape=0)
 
@@ -701,4 +753,3 @@ class Constraints:
             if v_k_plus_1[j] <= 0:
                 v_k_plus_1[j] = 0
         return v_k_plus_1
-

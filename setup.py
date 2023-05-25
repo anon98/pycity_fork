@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2020,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -21,6 +21,7 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER I
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+
 import setuptools
 from pathlib import Path
 
@@ -31,7 +32,7 @@ setuptools.setup(
     name="pycity_scheduling",
     description="A Python framework for the development, testing, and assessment of optimization-based"
                 "power scheduling algorithms for multi-energy systems in city districts",
-    version="1.1.0",
+    version="1.2.0",
     author="Institute for Automation of Complex Power Systems (ACS),"
            "E.ON Energy Research Center (E.ON ERC),"
            "RWTH Aachen University",
@@ -40,13 +41,14 @@ setuptools.setup(
     license="MIT",
     packages=setuptools.find_packages(where="src"),
     package_dir={"": "src"},
-    package_data={"pycity_scheduling": ["data/*.txt", "examples/*.ipynb"]},
+    package_data={"pycity_scheduling": ["data/*.txt", "data/*.dat", "examples/case_studies/*.ipynb"]},
     data_files=[(".", ["LICENSE.txt", "README.md"])],
     install_requires=[
         "numpy==1.19.5",
         "pandas==1.1.5",
         "matplotlib==3.3.4",
         "pyomo==5.7.3",
+        "mpi4py==3.1.3",
         "pycity_base==0.3.2"
     ],
     extras_require={

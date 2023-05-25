@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -45,7 +45,7 @@ class TestAlgorithms(unittest.TestCase):
         bd1.addEntity(bes)
         ths = ThermalHeatingStorage(e, 40, 0.5)
         bes.addDevice(ths)
-        eh = ElectricalHeater(e, 10)
+        eh = ElectricHeater(e, 10)
         bes.addDevice(eh)
         ap = Apartment(e)
         bd1.addEntity(ap)
@@ -61,7 +61,7 @@ class TestAlgorithms(unittest.TestCase):
         bd2.addEntity(bes)
         ths = ThermalHeatingStorage(e, 40, 0.5)
         bes.addDevice(ths)
-        eh = ElectricalHeater(e, 20)
+        eh = ElectricHeater(e, 20)
         bes.addDevice(eh)
         ap = Apartment(e)
         bd2.addEntity(ap)
@@ -71,7 +71,7 @@ class TestAlgorithms(unittest.TestCase):
         sh = SpaceHeating(e, method=0, loadcurve=load)
         ap.addEntity(sh)
 
-        wec = WindEnergyConverter(e, [50, 50], [0, 0], force_renewables=False)
+        wec = WindEnergyConverter(e, np.array([50, 50]), np.array([0, 0]), force_renewables=False)
         cd.addEntity(wec, [0, 0])
 
         pv = Photovoltaic(e, method=1, peak_power=4.6, force_renewables=False)
@@ -125,7 +125,7 @@ class TestAlgorithms(unittest.TestCase):
         cd.addEntity(bd2, [0, 0])
         bes = BuildingEnergySystem(e)
         bd2.addEntity(bes)
-        bat = Battery(e, 100, 100, storage_end_equality=True)
+        bat = Battery(e, 100, 100, eta=1.0, storage_end_equality=True)
         bes.addDevice(bat)
 
         f = algorithms['exchange-admm'](cd, rho=2, eps_primal=0.001, eps_dual=0.01)
@@ -157,7 +157,7 @@ class TestAlgorithms(unittest.TestCase):
     def test_exchange_miqp_admm(self):
         # Exchange MIQP ADMM constrained:
         f = algorithms['exchange-miqp-admm'](self.cd, rho=2.0, eps_primal=0.001, eps_dual=0.01,
-                                             eps_primal_i=0.001, eps_dual_i=0.01, x_update_mode='constrained')
+                                             x_update_mode='constrained', mode="integer")
         r = f.solve()
 
         self.assertAlmostEqual(20, self.bd1.p_el_schedule[0], 4)
@@ -166,33 +166,15 @@ class TestAlgorithms(unittest.TestCase):
         self.assertAlmostEqual(40, self.bd2.p_el_schedule[1], 4)
         self.assertAlmostEqual(60, self.cd.p_el_schedule[0], 2)
         self.assertAlmostEqual(60, self.cd.p_el_schedule[1], 2)
-        self.assertTrue(r["r_norms"][-2] > 0.001 or r["s_norms"][-2] > 0.01 or r["r_sub_ave"][-2] > 0.001
-                        or r["s_sub_ave"][-2] > 0.01)
+
         self.assertGreater(0.001, r["r_norms"][-1])
-        self.assertGreater(1, r["s_norms"][-1])
+        self.assertGreater(0.01, r["s_norms"][-1])
 
         # Test infeasible model:
         self.bd1.model.new_constr = pyomo.Constraint(expr=self.bd1.model.p_el_vars[0] == 0)
         self.bd1.model.p_el_vars[0].setub(15.0)
         with self.assertRaises(NonoptimalError):
             f.solve(full_update=True, debug=False)
-
-        """
-        f2 = algorithms['exchange-miqp-admm'](self.cd, rho=2.0, eps_primal=0.001, eps_dual=0.01,
-                                              eps_primal_i=0.001, eps_dual_i=0.01, x_update_mode='unconstrained')
-        r = f2.solve()
-
-        self.assertAlmostEqual(20, self.bd1.p_el_schedule[0], 1)
-        self.assertAlmostEqual(20, self.bd1.p_el_schedule[1], 1)
-        self.assertAlmostEqual(40, self.bd2.p_el_schedule[0], 1)
-        self.assertAlmostEqual(40, self.bd2.p_el_schedule[1], 1)
-        self.assertAlmostEqual(60, self.cd.p_el_schedule[0], 1)
-        self.assertAlmostEqual(60, self.cd.p_el_schedule[1], 1)
-        self.assertTrue(r["r_norms"][-2] > 0.001 or r["s_norms"][-2] > 0.01 or r["r_sub_ave"][-2] > 0.001
-                        or r["s_sub_ave"][-2] > 0.01)
-        self.assertGreater(0.001, r["r_norms"][-1])
-        self.assertGreater(1, r["s_norms"][-1])
-        """
         return
 
     def test_dual_decomposition(self):

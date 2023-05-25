@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -46,6 +46,7 @@ class Building(EntityContainer, bd.Building):
         - 'peak-shaving' : Try to flatten the schedule as much as possible.
         - 'max-consumption' : Try to reduce the maximum of the absolute values of the schedule as much as possible.
         - 'self-consumption' : Try to maximize the self-consumption of the local power generation.
+        - 'least-squares': Try to `follow` a given reference power profile.
         - 'none' : No objective (leave all flexibility to other participants).
     name : str, optional
         Name for the building.
@@ -75,6 +76,8 @@ class Building(EntityContainer, bd.Building):
         `True` if the soc at the end of the scheduling has to be equal to
         the initial soc.
         `False` if it has to be greater or equal than the initial soc.
+    least_squares_profile : numpy.ndarray, optional
+        Profile to be used by the least-squares objective.
 
     Notes
     -----
@@ -98,7 +101,7 @@ class Building(EntityContainer, bd.Building):
 
     def __init__(self, environment, objective='price', name=None,
                  profile_type=None, building_type=None,
-                 storage_end_equality=False):
+                 storage_end_equality=False, least_squares_profile=None):
         super().__init__(environment)
 
         self._long_id = "BD_" + self._id_string
@@ -111,6 +114,7 @@ class Building(EntityContainer, bd.Building):
         self.profile_type = profile_type
         self.building_type = building_type
         self.storage_end_equality = storage_end_equality
+        self.least_squares_profile = least_squares_profile
 
     def populate_model(self, model, mode="convex", robustness=None):
         """

@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -99,27 +99,27 @@ class BuildingEnergySystem(EntityContainer, bes.BES):
             If true: Return all installed devices
             If false: Only return the specified devices
         battery : boolean, optional
-            Return information on the battery
+            Return information about the battery unit
         boiler : boolean, optional
-            Return information on the boiler
+            Return information about the boiler unit
         chp : boolean, optional
-            Return information on the chp unit
+            Return information about the chp unit
         chiller : boolean, optional
-            Return information on the chiller unit
+            Return information about the chiller unit
         electrical_heater : boolean, optional
-            Return information on the electrical heater
+            Return information about the electric heater unit
         heatpump : boolean, optional
-            Return information on the heat pump
+            Return information about the heat pump unit
         inverter_acdc : boolean, optional
-            Return information on the AC-DC inverter
+            Return information about the AC-DC inverter unit
         inverter_dcac : boolean, optional
-            Return information on the DC-AC inverter
+            Return information about the DC-AC inverter unit
         pv : boolean, optional
-            Return information on the PV modules
+            Return information about the PV unit
         ths : boolean, optional
-            Return information on the thermal heating storage
+            Return information about the thermal heating storage unit
         tcs : boolean, optional
-            Return information on the thermal cooling storage
+            Return information about the thermal cooling storage unit
         """
         result = super().getHasDevices(all_devices=all_devices,
                                        battery=battery,

@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -38,7 +38,6 @@ def main(do_plot=False):
 
     # 1) Environment objects:
 
-
     # (Almost) every object within pycity_scheduling requires an environment. The environment object holds general data,
     # which is valid for all objects within pycity_scheduling, such as time data, weather data or energy market prices.
     # Therefore, all objects point to an environment. The first step is usually to generate such an environment.
@@ -55,7 +54,6 @@ def main(do_plot=False):
     # Generate the environment object:
     environment = Environment(timer=timer, weather=weather, prices=price)
 
-
     # Now there is a distinct environment object with timer, weather and price data.
     # We can use it to access different data of interest.
 
@@ -70,7 +68,6 @@ def main(do_plot=False):
     # For example, print the energy spot market day-ahead prices:
     print('\nDay-ahead spot market prices on 2015/01/01:')
     print(environment.prices.da_prices)
-
 
     # 2) Buildings objects:
 
@@ -88,7 +85,6 @@ def main(do_plot=False):
     bes = BuildingEnergySystem(environment=environment)
 
     building.addMultipleEntities([apartment, bes])
-
 
     # Every apartment usually possesses both electrical and thermal loads:
     # The electrical load is added to the apartment as follows:
@@ -120,7 +116,6 @@ def main(do_plot=False):
 
     apartment.addMultipleEntities([load, space_heating])
 
-
     # The BuildingEnergySystem (BES) class is a 'container' for all kind of building energy systems (i.e., electrical
     # and/or thermal assets). For example, we can add an electro-thermal heating system (such as a heatpump plus thermal
     # energy storage) and a photovoltaic unit to a building's BES as done below. In pycity_scheduling all BES devices
@@ -136,7 +131,6 @@ def main(do_plot=False):
     print('\nBES has heatpump? : ', bes.getHasDevices(all_devices=False, heatpump=True)[0])
     print('BES has thermal heating storage? : ', bes.getHasDevices(all_devices=False, ths=True)[0])
     print('BES has photovoltaic? : ', bes.getHasDevices(all_devices=False, pv=True)[0])
-
 
     # 3) CityDistrict objects:
 
@@ -178,7 +172,6 @@ def main(do_plot=False):
     print(cd.get_nb_of_building_entities())
     print("\nDetailed city district information:")
     debug.print_district(cd, 3)
-
 
     # 4) Power scheduling:
 

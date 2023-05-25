@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -320,7 +320,7 @@ class TestBuilding(unittest.TestCase):
         sh = SpaceHeating(env, loadcurve=loadcurve)
         ap.addEntity(sh)
 
-        eh = ElectricalHeater(env, 20)
+        eh = ElectricHeater(env, 20)
         bes.addDevice(eh)
 
         self.bd.populate_model(model, robustness=(3, 0.5))
@@ -1188,15 +1188,15 @@ class TestElectricalEntity(unittest.TestCase):
         return
 
 
-class TestElectricalHeater(unittest.TestCase):
+class TestElectricHeater(unittest.TestCase):
     def setUp(self):
         e = get_env(4, 8)
-        self.eh = ElectricalHeater(e, 10, 10, 0.8)
+        self.eh = ElectricHeater(e, 10, 10, 0.8)
         return
 
     def test_lower_activation(self):
         e = get_env(4, 8)
-        eh = ElectricalHeater(e, 10, lower_activation_limit=0.5)
+        eh = ElectricHeater(e, 10, lower_activation_limit=0.5)
         m = pyomo.ConcreteModel()
         eh.populate_model(m, "integer")
         eh.update_model("integer")
@@ -1212,7 +1212,7 @@ class TestElectricalHeater(unittest.TestCase):
 
     def test_update_schedule(self):
         e = get_env(2, 2)
-        eh = ElectricalHeater(e, 10, lower_activation_limit=0.5)
+        eh = ElectricHeater(e, 10, lower_activation_limit=0.5)
         m = pyomo.ConcreteModel()
         eh.populate_model(m)
         eh.update_model()
@@ -1232,7 +1232,8 @@ class TestElectricVehicle(unittest.TestCase):
     def setUp(self):
         e = get_env(6, 9)
         self.ct = [1, 1, 1, 0, 0, 0, 1, 1, 1]
-        self.ev = ElectricalVehicle(e, 10, 20, p_el_max_discharge=20, soc_init=0.5, charging_time=self.ct)
+        self.ev = ElectricVehicle(e, 10, 20, p_el_max_discharge=20, soc_init=0.5, charging_time=self.ct,
+                                  simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         return
 
     def test_populate_model(self):
@@ -1262,7 +1263,7 @@ class TestElectricVehicle(unittest.TestCase):
         solve_model(model)
 
         self.assertAlmostEqual(10, self.ev.model.e_el_vars[2].value, places=5)
-        self.assertAlmostEqual(2, self.ev.model.e_el_vars[3].value, places=5)
+        self.assertAlmostEqual(10, self.ev.model.e_el_vars[3].value, places=5)
 
         self.ev.timer.mpc_update()
         self.ev.update_model()
@@ -1278,16 +1279,8 @@ class TestElectricVehicle(unittest.TestCase):
                 self.assertEqual(0, self.ev.model.p_el_supply_vars[t].ub)
                 self.assertIsNone(self.ev.model.p_el_drive_vars[t].ub)
         self.assertAlmostEqual(10, self.ev.model.e_el_vars[1].value, places=5)
-        self.assertAlmostEqual(2, self.ev.model.e_el_vars[2].value, places=5)
-        self.assertLessEqual(1.6, self.ev.model.e_el_vars[5].value)
-
-        self.ev.update_schedule()
-        self.ev.timer.mpc_update()
-        self.ev.timer.mpc_update()
-        self.ev.update_model()
-        solve_model(model)
-
-        self.assertAlmostEqual(10, self.ev.model.e_el_vars[5].value, places=5)
+        self.assertAlmostEqual(10, self.ev.model.e_el_vars[2].value, places=5)
+        self.assertLessEqual(3, self.ev.model.e_el_vars[5].value)
         return
 
     def test_get_objective(self):
@@ -1304,17 +1297,17 @@ class TestElectricVehicle(unittest.TestCase):
 
     def test_no_charge_time(self):
         e = get_env(6, 9)
-        ev = ElectricalVehicle(e, 37.0, 11.0)
+        ev = ElectricVehicle(e, 37.0, 11.0)
         assert_equal_array(ev.charging_time, [1]*9)
         e = get_env(28, 96*24-12)
-        ev = ElectricalVehicle(e, 37.0, 11.0)
+        ev = ElectricVehicle(e, 37.0, 11.0)
         assert_equal_array(ev.charging_time, np.tile([1] * 24 + [0] * 48 + [1] * 24, 24)[:-12])
         return
 
     def test_no_discharge(self):
         model = pyomo.ConcreteModel()
         e = get_env(6, 9)
-        ev = ElectricalVehicle(e, 10.0, 40.0, charging_time=self.ct)
+        ev = ElectricVehicle(e, 10.0, 40.0, charging_time=self.ct, simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         ev.populate_model(model)
         ev.update_model()
         model.o = pyomo.Objective(expr=ev.model.p_el_vars[0] + ev.model.p_el_vars[1])
@@ -1323,92 +1316,36 @@ class TestElectricVehicle(unittest.TestCase):
         assert_equal_array(ev.p_el_schedule[:4], [0, 0, 5*4, 0])
         assert_equal_array(ev.p_el_demand_schedule[:4], [0, 0, 5 * 4, 0])
         assert_equal_array(ev.p_el_supply_schedule[:4], [0, 0, 0, 0])
-        assert_equal_array(ev.e_el_schedule[:4], [5, 5, 10, 2])
+        assert_equal_array(ev.e_el_schedule[:4], [5, 5, 10, 10])
 
         model = pyomo.ConcreteModel()
         e = get_env(6, 9)
-        ev = ElectricalVehicle(e, 10.0, 40.0, p_el_max_discharge=8, charging_time=self.ct)
+        ev = ElectricVehicle(e, 10.0, 40.0, p_el_max_discharge=8, charging_time=self.ct, simulate_driving=True,
+                             minimum_soc_end=1.0, eta=1.0)
         ev.populate_model(model)
         ev.update_model()
         model.o = pyomo.Objective(expr=ev.model.p_el_vars[0] + ev.model.p_el_vars[1])
         solve_model(model)
         ev.update_schedule()
-        assert_equal_array(ev.p_el_schedule[:4], [-8, -8, 9 * 4, 0])
-        assert_equal_array(ev.p_el_demand_schedule[:4], [0, 0, 9 * 4, 0])
-        assert_equal_array(ev.p_el_supply_schedule[:4], [8, 8, 0, 0])
-        assert_equal_array(ev.e_el_schedule[:4], [3, 1, 10, 2])
-        return
-
-    def test_partial_charge(self):
-        for step_size in [1, 2, 3, 6, 12]:
-            with self.subTest("step_size: {}".format(step_size)):
-                e = get_env(step_size, 12, step_size)
-                self.ct = [1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0]
-                self.ev = ElectricalVehicle(e, 10, 20, 0.5, charging_time=self.ct)
-                m = pyomo.ConcreteModel()
-                self.ev.populate_model(m)
-                obj = 0
-                for t in range(len(self.ev.model.p_el_vars)):
-                    obj += self.ev.model.p_el_vars[t] * self.ev.model.p_el_vars[t]
-                m.o = pyomo.Objective(expr=obj)
-                for i in range(0, 12, step_size):
-                    self.ev.update_model(m)
-                    solve_model(m)
-                    self.ev.update_schedule()
-                    e.timer.mpc_update()
-                assert_equal_array(self.ev.p_el_schedule, [5 / 3 * 4] * 3 + [0] * 3 + [8 / 3 * 4] * 3 + [0] * 3)
-
-        step_size = 12
-        e = get_env(step_size, 12, step_size)
-        self.ev = ElectricalVehicle(e, 10, 20, 20, soc_init=0.5, charging_time=self.ct)
-        m = pyomo.ConcreteModel()
-        self.ev.populate_model(m)
-        self.ev.update_model(m)
-        m.o = pyomo.Objective(expr=self.ev.model.p_el_vars[2] + self.ev.model.p_el_vars[7])
-        solve_model(m)
-        self.ev.update_schedule()
-        self.assertAlmostEqual(0, self.ev.p_el_schedule[2], 4)
-        self.assertAlmostEqual(-2 * 4, self.ev.p_el_schedule[7], 4)
+        assert_equal_array(ev.p_el_schedule[:4], [0, 0, 20, 0])
+        assert_equal_array(ev.p_el_demand_schedule[:4], [0, 8, 20, 0])
+        assert_equal_array(ev.p_el_supply_schedule[:4], [0, 8, 0, 0])
+        assert_equal_array(ev.e_el_schedule[:4], [5, 5, 10, 10])
         return
 
     def test_bad_charging_times(self):
         e = get_env(3, 12)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always", UserWarning)
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0])
-            self.assertEqual(0, len(w))
+        self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+                                  simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         with self.assertWarns(UserWarning):
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0])
+            self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+                                      simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         with self.assertWarns(UserWarning):
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0])
+            self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0],
+                                      simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         with self.assertWarns(UserWarning):
-            self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1])
-        return
-
-    def test_inital_charging_times(self):
-        for step_size in [1, 2, 3, 6, 12]:
-            with self.subTest("step_size: {}".format(step_size)):
-                e = get_env(step_size, 12, step_size)
-                with warnings.catch_warnings(record=True) as w:
-                    warnings.simplefilter("always", UserWarning)
-                    self.ev = ElectricalVehicle(e, 10, 8, soc_init=0.8,
-                                                charging_time=[0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0])
-                    self.assertEqual(0, len(w))
-                m = pyomo.ConcreteModel()
-                self.ev.populate_model(m)
-                obj = 0
-                for t in range(len(self.ev.model.p_el_vars)):
-                    obj += self.ev.model.p_el_vars[t] * self.ev.model.p_el_vars[t]
-                m.o = pyomo.Objective(expr=obj)
-                for i in range(0, 12, step_size):
-                    self.ev.update_model(m)
-                    solve_model(m)
-                    self.ev.update_schedule()
-                    e.timer.mpc_update()
-                assert_equal_array(self.ev.p_el_schedule, [0, 8] + [0] * 4 + [8] * 4 + [0] * 2)
-                assert_equal_array(self.ev.p_el_demand_schedule, [0, 8] + [0] * 4 + [8] * 4 + [0] * 2)
-                assert_equal_array(self.ev.p_el_supply_schedule, [0] * 12)
-                assert_equal_array(self.ev.e_el_schedule, [8, 10] + [2] * 4 + [4, 6, 8, 10] + [2] * 2)
+            self.ev = ElectricVehicle(e, 10, 8, soc_init=0.5, charging_time=[1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
+                                      simulate_driving=True, minimum_soc_end=1.0, eta=1.0)
         return
 
 

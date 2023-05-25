@@ -19,8 +19,6 @@ prepare:
   script:
     - mkdir -p /.docker
     - cp ${CI_PROJECT_DIR}/requirements.txt /.docker/
-    - mkdir -p /.docker/gitlab-utils
-    - cp ${CI_PROJECT_DIR}/gitlab-utils/pyomo_scipampl.patch /.docker/gitlab-utils/
     - docker build -f ${DOCKER_FILE} --target python37 -t ${DOCKER_IMAGE}:python37 /.docker
     - docker push ${DOCKER_IMAGE}:python37
     - docker build -f ${DOCKER_FILE} --target python38 -t ${DOCKER_IMAGE}:python38 /.docker
@@ -92,8 +90,8 @@ unittest-scip-python37:
   stage: test
   image: ${DOCKER_IMAGE}:python37
   script:
-    - sed -i '55s/GUROBI_DIRECT_SOLVER/SCIP_SOLVER/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
-    - sed -i '56s/GUROBI_DIRECT_SOLVER_OPTIONS/SCIP_SOLVER_OPTIONS/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
+    - sed -i '53s/GUROBI_DIRECT_SOLVER/SCIP_SOLVER/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
+    - sed -i '54s/GUROBI_DIRECT_SOLVER_OPTIONS/SCIP_SOLVER_OPTIONS/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
     - python3.7 -m pip install --no-cache-dir $CI_PROJECT_DIR/.
     - python3.7 -m unittest discover -s $CI_PROJECT_DIR/src/pycity_scheduling/testing/unit_tests -v
   tags:
@@ -103,8 +101,8 @@ unittest-scip-python38:
   stage: test
   image: ${DOCKER_IMAGE}:python38
   script:
-    - sed -i '55s/GUROBI_DIRECT_SOLVER/SCIP_SOLVER/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
-    - sed -i '56s/GUROBI_DIRECT_SOLVER_OPTIONS/SCIP_SOLVER_OPTIONS/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
+    - sed -i '53s/GUROBI_DIRECT_SOLVER/SCIP_SOLVER/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
+    - sed -i '54s/GUROBI_DIRECT_SOLVER_OPTIONS/SCIP_SOLVER_OPTIONS/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
     - python3.8 -m pip install --no-cache-dir $CI_PROJECT_DIR/.
     - python3.8 -m unittest discover -s $CI_PROJECT_DIR/src/pycity_scheduling/testing/unit_tests -v
   tags:
@@ -114,8 +112,8 @@ unittest-scip-python39:
   stage: test
   image: ${DOCKER_IMAGE}:python39
   script:
-    - sed -i '55s/GUROBI_DIRECT_SOLVER/SCIP_SOLVER/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
-    - sed -i '56s/GUROBI_DIRECT_SOLVER_OPTIONS/SCIP_SOLVER_OPTIONS/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
+    - sed -i '53s/GUROBI_DIRECT_SOLVER/SCIP_SOLVER/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
+    - sed -i '54s/GUROBI_DIRECT_SOLVER_OPTIONS/SCIP_SOLVER_OPTIONS/g' $CI_PROJECT_DIR/src/pycity_scheduling/solvers.py
     - python3.9 -m pip install --no-cache-dir $CI_PROJECT_DIR/.
     - python3.9 -m unittest discover -s $CI_PROJECT_DIR/src/pycity_scheduling/testing/unit_tests -v
   tags:

@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -40,8 +40,8 @@ from pycity_scheduling.classes.chiller import Chiller
 from pycity_scheduling.classes.combined_heat_power import CombinedHeatPower
 from pycity_scheduling.classes.curtailable_load import CurtailableLoad
 from pycity_scheduling.classes.deferrable_load import DeferrableLoad
-from pycity_scheduling.classes.electrical_heater import ElectricalHeater
-from pycity_scheduling.classes.electrical_vehicle import ElectricalVehicle
+from pycity_scheduling.classes.electric_heater import ElectricHeater
+from pycity_scheduling.classes.electric_vehicle import ElectricVehicle
 from pycity_scheduling.classes.fixed_load import FixedLoad
 from pycity_scheduling.classes.heat_pump import HeatPump
 from pycity_scheduling.classes.photovoltaic import Photovoltaic
@@ -71,8 +71,8 @@ __all__ = [
     'CombinedHeatPower',
     'CurtailableLoad',
     'DeferrableLoad',
-    'ElectricalHeater',
-    'ElectricalVehicle',
+    'ElectricHeater',
+    'ElectricVehicle',
     'FixedLoad',
     'HeatPump',
     'Photovoltaic',
@@ -105,8 +105,8 @@ all_entities = {
     'CHP': CombinedHeatPower,
     'CL': CurtailableLoad,
     'DL': DeferrableLoad,
-    'EH': ElectricalHeater,
-    'EV': ElectricalVehicle,
+    'EH': ElectricHeater,
+    'EV': ElectricVehicle,
     'FL': FixedLoad,
     'HP': HeatPump,
     'PV': Photovoltaic,
@@ -121,7 +121,7 @@ heating_devices = {
     'HP': HeatPump,
     'BL': Boiler,
     'CHP': CombinedHeatPower,
-    'EH': ElectricalHeater,
+    'EH': ElectricHeater,
 }
 
 cooling_devices = {
@@ -131,7 +131,7 @@ cooling_devices = {
 consumption_devices = {
     'CL': CurtailableLoad,
     'DL': DeferrableLoad,
-    'EV': ElectricalVehicle,
+    'EV': ElectricVehicle,
     'FL': FixedLoad,
 }
 

@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -135,6 +135,12 @@ class ElectricalEntity(OptimizationEntity):
             obj = 0
             for t in range(self.op_horizon):
                 obj += self.model.p_export_var[t] * self.model.p_export_var[t]
+            return coeff * obj
+        if self.objective == 'least-squares':
+            obj = 0
+            for t in range(self.op_horizon):
+                obj += (self.model.p_el_vars[t] - self.least_squares_profile[t]) * \
+                       (self.model.p_el_vars[t] - self.least_squares_profile[t])
             return coeff * obj
         if self.objective == 'flexibility-quantification':
             if not hasattr(self.model, "max_p_flex_var"):

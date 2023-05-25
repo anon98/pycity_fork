@@ -2,7 +2,7 @@
 The pycity_scheduling framework
 
 
-Copyright (C) 2022,
+Copyright (C) 2023,
 Institute for Automation of Complex Power Systems (ACS),
 E.ON Energy Research Center (E.ON ERC),
 RWTH Aachen University
@@ -30,10 +30,10 @@ from pycity_scheduling.solvers import DEFAULT_SOLVER, DEFAULT_SOLVER_OPTIONS
 
 
 class CentralOptimization(OptimizationAlgorithm):
-    """ Implementation of a central Algorithm.
+    """
+    Implementation of the reference Central Optimization algorithm.
 
-        Only creates one model and calls the solver only once. Combines the
-        objectives of all entities.
+    Only creates one model and calls the solver once. Combines the objectives of all entities.
     """
     def __init__(self, city_district, solver=DEFAULT_SOLVER, solver_options=DEFAULT_SOLVER_OPTIONS, mode="convex",
                  robustness=None):
@@ -81,4 +81,5 @@ class CentralOptimization(OptimizationAlgorithm):
     def _solve(self, results, params, debug):
         self.node.solve(variables=None, debug=debug)
         self._save_time(results, params)
+        results["obj_value"] = pyomo.value(self.node.model.o)
         return
