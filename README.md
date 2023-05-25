@@ -43,7 +43,7 @@ We recommend one of the following solvers:
 
 ### Installation of pycity_scheduling
 
-The latest version of pycity_scheduling is v1.1.0.
+The latest version of pycity_scheduling is v1.2.0.
 
 If all the abovementioned dependencies are installed, you should be able to install package pycity_scheduling via [PyPI](https://pypi.org/) (using Python version >= 3.7) as follows:
 
@@ -272,7 +272,7 @@ if __name__ == '__main__':
 
 ## Tutorial
 
-The pycity_scheduling package comes with several example/tutorial scripts in folder ./src/examples.
+The pycity_scheduling package comes with several example, tutorial, and simple case study scripts in folder ./src/examples.
 
 The unit tests can be found in folder ./src/testing.
 
