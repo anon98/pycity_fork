@@ -84,26 +84,26 @@ pycity\_scheduling.classes.deferrable\_load module
    :undoc-members:
    :show-inheritance:
 
+pycity\_scheduling.classes.electric\_heater module
+--------------------------------------------------
+
+.. automodule:: pycity_scheduling.classes.electric_heater
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.classes.electric\_vehicle module
+---------------------------------------------------
+
+.. automodule:: pycity_scheduling.classes.electric_vehicle
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pycity\_scheduling.classes.electrical\_entity module
 ----------------------------------------------------
 
 .. automodule:: pycity_scheduling.classes.electrical_entity
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.classes.electrical\_heater module
-----------------------------------------------------
-
-.. automodule:: pycity_scheduling.classes.electrical_heater
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.classes.electrical\_vehicle module
------------------------------------------------------
-
-.. automodule:: pycity_scheduling.classes.electrical_vehicle
    :members:
    :undoc-members:
    :show-inheritance:

@@ -52,154 +52,146 @@ pycity\_scheduling.examples.example\_05\_algorithm\_exchange\-admm module
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.example\_06\_algorithm\_warmstart module
---------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_06_algorithm_warmstart
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_07\_objective\_peak\-shaving module
-------------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_07_objective_peak-shaving
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_08\_objective\_max\-consumption module
----------------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_08_objective_max-consumption
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_09\_objective\_self\-consumption module
-----------------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_09_objective_self-consumption
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_10\_objective\_price module
-----------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_10_objective_price
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_11\_objective\_co2 module
---------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_11_objective_co2
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_12\_objective\_valley\-filling module
---------------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_12_objective_valley-filling
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_13\_district\_generator module
--------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_13_district_generator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_14\_district\_flexibility\_quantification module
--------------------------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_14_district_flexibility_quantification
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_15\_scheduling\_complex\_city\_district module
------------------------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_15_scheduling_complex_city_district
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_16\_scheduling\_convex\_vs module
-----------------------------------------------------------------------
-
-.. automodule:: pycity_scheduling.examples.example_16_scheduling_convex_vs
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pycity\_scheduling.examples.example\_17\_scheduling\_pv\+battery\_system module
+pycity\_scheduling.examples.example\_06\_algorithm\_exchange\-miqp\-admm module
 -------------------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.example_17_scheduling_pv+battery_system
+.. automodule:: pycity_scheduling.examples.example_06_algorithm_exchange-miqp-admm
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.example\_18\_scheduling\_heating\_and\_cooling\_loads module
-----------------------------------------------------------------------------------------
+pycity\_scheduling.examples.example\_07\_algorithm\_warmstart module
+--------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.example_18_scheduling_heating_and_cooling_loads
+.. automodule:: pycity_scheduling.examples.example_07_algorithm_warmstart
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.example\_19\_scheduling\_robust\_optimization module
---------------------------------------------------------------------------------
+pycity\_scheduling.examples.example\_08\_algorithm\_parallel\_mpi module
+------------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.example_19_scheduling_robust_optimization
+.. automodule:: pycity_scheduling.examples.example_08_algorithm_parallel_mpi
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.example\_20\_post\-processing\_schedule\_evaluation module
---------------------------------------------------------------------------------------
+pycity\_scheduling.examples.example\_09\_objective\_peak\-shaving module
+------------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.example_20_post-processing_schedule_evaluation
+.. automodule:: pycity_scheduling.examples.example_09_objective_peak-shaving
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.example\_21\_post\-processing\_metrics\_evaluation module
+pycity\_scheduling.examples.example\_10\_objective\_self\-consumption module
+----------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_10_objective_self-consumption
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_11\_objective\_max\-consumption module
+---------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_11_objective_max-consumption
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_12\_objective\_price module
+----------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_12_objective_price
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_13\_objective\_co2 module
+--------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_13_objective_co2
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_14\_objective\_valley\-filling module
+--------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_14_objective_valley-filling
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_15\_district\_generator module
+-------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_15_district_generator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_16\_scheduling\_complex\_city\_district module
+-----------------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_16_scheduling_complex_city_district
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_17\_district\_flexibility\_quantification module
 -------------------------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.example_21_post-processing_metrics_evaluation
+.. automodule:: pycity_scheduling.examples.example_17_district_flexibility_quantification
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.illustrative\_code\_example\_listing1 module
-------------------------------------------------------------------------
+pycity\_scheduling.examples.example\_18\_scheduling\_pv\+battery\_system module
+-------------------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.illustrative_code_example_listing1
+.. automodule:: pycity_scheduling.examples.example_18_scheduling_pv+battery_system
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.illustrative\_code\_example\_listing2 module
-------------------------------------------------------------------------
+pycity\_scheduling.examples.example\_19\_scheduling\_heating\_and\_cooling\_loads module
+----------------------------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.illustrative_code_example_listing2
+.. automodule:: pycity_scheduling.examples.example_19_scheduling_heating_and_cooling_loads
    :members:
    :undoc-members:
    :show-inheritance:
 
-pycity\_scheduling.examples.illustrative\_code\_example\_listing3 module
-------------------------------------------------------------------------
+pycity\_scheduling.examples.example\_20\_scheduling\_convex\_vs module
+----------------------------------------------------------------------
 
-.. automodule:: pycity_scheduling.examples.illustrative_code_example_listing3
+.. automodule:: pycity_scheduling.examples.example_20_scheduling_convex_vs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_21\_scheduling\_robust\_optimization module
+--------------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_21_scheduling_robust_optimization
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_22\_post\-processing\_schedule\_evaluation module
+--------------------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_22_post-processing_schedule_evaluation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.examples.example\_23\_post\-processing\_metrics\_evaluation module
+-------------------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.examples.example_23_post-processing_metrics_evaluation
    :members:
    :undoc-members:
    :show-inheritance:

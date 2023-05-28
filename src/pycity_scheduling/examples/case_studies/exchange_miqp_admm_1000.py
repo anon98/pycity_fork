@@ -115,12 +115,6 @@ def main():
         print("System level schedule:")
         print(list(district_net_schedule))
 
-        # Verify the feasibility of the solution:
-        district.copy_schedule("district_schedule")
-        d_a = DistrictAnalyzer(city_district=district)
-        d_a.save_schedules()
-        d_a.count_violated_constraints()
-
         # Calculate and print the objective value:
         obj_new = 0.0
         for t in range(district.op_horizon):

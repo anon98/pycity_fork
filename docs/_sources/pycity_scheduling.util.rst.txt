@@ -12,6 +12,14 @@ pycity\_scheduling.util.debug module
    :undoc-members:
    :show-inheritance:
 
+pycity\_scheduling.util.district\_analyzer module
+-------------------------------------------------
+
+.. automodule:: pycity_scheduling.util.district_analyzer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pycity\_scheduling.util.factory module
 --------------------------------------
 
@@ -32,6 +40,14 @@ pycity\_scheduling.util.metric module
 -------------------------------------
 
 .. automodule:: pycity_scheduling.util.metric
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.util.mpi\_interface module
+---------------------------------------------
+
+.. automodule:: pycity_scheduling.util.mpi_interface
    :members:
    :undoc-members:
    :show-inheritance:

@@ -28,10 +28,42 @@ pycity\_scheduling.algorithms.dual\_decomposition\_algorithm module
    :undoc-members:
    :show-inheritance:
 
+pycity\_scheduling.algorithms.dual\_decomposition\_algorithm\_mpi module
+------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.algorithms.dual_decomposition_algorithm_mpi
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pycity\_scheduling.algorithms.exchange\_admm\_algorithm module
 --------------------------------------------------------------
 
 .. automodule:: pycity_scheduling.algorithms.exchange_admm_algorithm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.algorithms.exchange\_admm\_algorithm\_mpi module
+-------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.algorithms.exchange_admm_algorithm_mpi
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.algorithms.exchange\_miqp\_admm\_algorithm module
+--------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.algorithms.exchange_miqp_admm_algorithm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pycity\_scheduling.algorithms.exchange\_miqp\_admm\_algorithm\_mpi module
+-------------------------------------------------------------------------
+
+.. automodule:: pycity_scheduling.algorithms.exchange_miqp_admm_algorithm_mpi
    :members:
    :undoc-members:
    :show-inheritance:
