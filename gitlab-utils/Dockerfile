@@ -54,8 +54,8 @@ RUN cd / &&\
     add-apt-repository -y ppa:deadsnakes/ppa &&\
     apt-get update &&\
     apt-get install -y python3.7-venv python3-pip python3.7-dev &&\
+	python3.7 -m pip install --no-cache-dir setuptools twine wheel &&\
     cd /
-
 
 RUN cd $GUROBI_HOME &&\
     python3.7 setup.py install &&\
@@ -73,6 +73,7 @@ RUN cd / &&\
     add-apt-repository -y ppa:deadsnakes/ppa &&\
     apt-get update &&\
     apt-get install -y python3.8-venv python3-pip python3.8-dev &&\
+	python3.8 -m pip install --no-cache-dir setuptools twine wheel &&\
     cd /
 
 RUN cd $GUROBI_HOME &&\
@@ -91,8 +92,8 @@ RUN cd / &&\
     add-apt-repository -y ppa:deadsnakes &&\
     apt-get update &&\
     apt-get install -y python3.9-venv python3-pip python3.9-dev &&\
+	python3.9 -m pip install --no-cache-dir setuptools twine wheel &&\
     cd /
-
 
 RUN cd $GUROBI_HOME &&\
     python3.9 setup.py install &&\
