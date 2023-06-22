@@ -141,7 +141,7 @@ class Prices(pr.Prices):
         else:
             if len(tou_prices) != timer.simu_horizon:
                 raise ValueError(
-                    "Provided Time Of Use prices do not match the number of "
+                    "Provided time of use prices do not match the number of "
                     "timesteps in the simulation horizon.\n"
                     "Number of timesteps: {0}, Length of price data: {1}"
                     .format(timer.simu_horizon, len(tou_prices))

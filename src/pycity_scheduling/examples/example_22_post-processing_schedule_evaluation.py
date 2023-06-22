@@ -120,7 +120,7 @@ def main(do_plot=False):
     if do_plot:
         plot_entity(cd, schedule=["ref", "default"], **kwargs)
 
-    # Additionally to this detail in the plots, you can notice that all the buildings have a constant p_th_heat_schedule
+    # In addition to this detail in the plots, you can notice that all the buildings have a constant p_th_heat_schedule
     # of zero. This is the result of all buildings satisfying a net thermal demand of zero.
     if do_plot:
         plot_entity(bd1, schedule=["ref", "default"], **kwargs)

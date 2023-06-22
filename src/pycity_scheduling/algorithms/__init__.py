@@ -33,7 +33,6 @@ from .exchange_miqp_admm_algorithm import ExchangeMIQPADMM
 from .exchange_miqp_admm_algorithm_mpi import ExchangeMIQPADMMMPI
 
 
-
 __all__ = [
     'StandAlone',
     'LocalOptimization',

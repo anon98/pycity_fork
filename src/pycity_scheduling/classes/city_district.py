@@ -122,8 +122,7 @@ class CityDistrict(ElectricalEntity, cd.CityDistrict):
         """
         Changes the current schedule to account imbalances.
 
-        The imbalances are determined from the current schedules of the contained
-        entities.
+        The imbalances are determined from the current schedules of the contained entities.
         """
 
         total = np.zeros_like(self.schedule["p_el"])

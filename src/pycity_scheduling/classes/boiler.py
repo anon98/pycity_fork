@@ -106,7 +106,7 @@ class Boiler(ThermalEntityHeating, bl.Boiler):
         """
         Objective function for entity level scheduling.
 
-        Return the objective function of the boiler weighted with coeff.
+        Return the objective function of the boiler weighted with `coeff`.
         Sum of `p_th_heat`.
 
         Parameters

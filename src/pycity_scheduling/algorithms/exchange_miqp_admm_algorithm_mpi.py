@@ -51,7 +51,7 @@ class ExchangeMIQPADMMMPI(IterationAlgorithm, DistributedAlgorithm):
         the functions being called and are one of `__call__`, `set_instance_`,
         `solve`.
         `__call__` is the function being called when generating an instance
-        with the pyomo SolverFactory.  Additionally to the options provided,
+        with the pyomo SolverFactory. In addition to the options provided,
         `node_ids` is passed to this call containing the IDs of the entities
         being optimized.
         `set_instance` is called when a pyomo Model is set as an instance of
