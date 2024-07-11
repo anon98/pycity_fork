@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycity_scheduling"
+version = "1.2.1"
+description = "A Python framework for optimization-based power scheduling algorithms in city districts"
+authors = [
+    {name = "Institute for Automation of Complex Power Systems (ACS)"},
+    {name = "E.ON Energy Research Center (E.ON ERC)"},
+    {name = "RWTH Aachen University"}
+]
+license = {text = "MIT"}
+homepage = "https://git.rwth-aachen.de/acs/public/simulation/pycity_scheduling"
+readme = "README.md"
+
+[project.dependencies]
+numpy = "==1.26.0"
+pandas = "==2.1.1"
+matplotlib = "==3.8.0"
+pyomo = "==6.7.3" 
+mpi4py = "==3.1.3"
+pycity-base = "==0.3.3"
+pyproj = "==3.6.1"
+
+[project.optional-dependencies]
+test = ["pytest==6.2.4"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

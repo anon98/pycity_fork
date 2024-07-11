@@ -150,8 +150,8 @@ def _known_domains(variable):
 
 _numpy_type = {
     float: np.float64,
-    int: np.int,
-    bool: np.bool
+    int: int,
+    bool: bool
 }
 
 

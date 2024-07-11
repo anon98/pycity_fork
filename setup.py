@@ -44,12 +44,13 @@ setuptools.setup(
     package_data={"pycity_scheduling": ["data/*.txt", "data/*.dat", "examples/case_studies/*.ipynb"]},
     data_files=[(".", ["LICENSE.txt", "README.md"])],
     install_requires=[
-        "numpy==1.19.5",
-        "pandas==1.1.5",
-        "matplotlib==3.3.4",
-        "pyomo==5.7.3",
+        "pycity-base==0.3.3",
+        "numpy==1.26.0",
+        "pandas==2.1.1",
+        "matplotlib==3.8.0",
         "mpi4py==3.1.3",
-        "pycity_base==0.3.2"
+        "Pyomo==6.7.3",
+        "pyproj==3.6.1"
     ],
     extras_require={
         "test": ["pytest==6.2.4"]

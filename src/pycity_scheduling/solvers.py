@@ -37,7 +37,17 @@ GUROBI_PERSISTENT_SOLVER_OPTIONS = {'solve': {'options': {'OutputFlag': 0,
                                                           "Method": -1}}}
 
 SCIP_SOLVER = "scip"
-SCIP_SOLVER_OPTIONS = {'solve': {'options': {}}}
+SCIP_SOLVER_OPTIONS = {
+    'limits/time': 60,             # Time limit in seconds
+    'limits/gap': 0.01,            # Relative gap termination criterion
+    'limits/solutions': 5,         # Limit on the number of solutions
+    'limits/nodes': 500,           # Limit on the number of nodes
+    'limits/memory': 1024,         # Memory limit in MB
+    'limits/bestsol': 1000,        # Limit on the value of the best solution
+    'numerics/feastol': 1e-6,      # Feasibility tolerance
+    'numerics/dualfeastol': 1e-7,  # Dual feasibility tolerance
+    'display/verblevel': 4         # Verbosity level
+    }
 
 BONMIN_SOLVER = "couenne"
 BONMIN_SOLVER_OPTIONS = {'solve': {'options': {}}}
